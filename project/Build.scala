@@ -308,6 +308,14 @@ object DottyInjectedPlugin extends AutoPlugin {
       jsDependencyManifest <<= jsDependencyManifest.dependsOn(compile)
     )))
 
+  lazy val directTestSuite = project.in(file("directTestSuite")).
+    settings(
+      // compileWithDottySettings,
+      overrideScalaVersionSetting,
+      testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+      libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % "test"
+    ).dependsOn(dotty)
+
   lazy val `dotty-bench` = project.in(file("bench")).
     dependsOn(dotty % "compile->test").
     settings(
