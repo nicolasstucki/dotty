@@ -14,6 +14,7 @@ import NameOps._
 import collection.mutable
 import reporting.diagnostic.Message
 import reporting.diagnostic.messages._
+import transform.phantom.Phantoms._
 
 trait TypeAssigner {
   import tpd._
@@ -319,9 +320,10 @@ trait TypeAssigner {
   def assignType(tree: untpd.Apply, fn: Tree, args: List[Tree])(implicit ctx: Context) = {
     val ownType = fn.tpe.widen match {
       case fntpe @ MethodType(_, ptypes) =>
-        if (sameLength(ptypes, args) || ctx.phase.prev.relaxedTyping) fntpe.instantiate(args.tpes)
-        else
-          errorType(i"wrong number of arguments for $fntpe: ${fn.tpe}, expected: ${ptypes.length}, found: ${args.length}", tree.pos)
+        def sameLengthAfterPhantomErasure =
+          ctx.phase.erasedRefPhantoms && sameLength(ptypes, args.filterNot(arg => arg.typeOpt.isPhantom))
+        if (sameLength(ptypes, args) || ctx.phase.prev.relaxedTyping || sameLengthAfterPhantomErasure) fntpe.instantiate(args.tpes)
+        else errorType(i"wrong number of arguments for $fntpe: ${fn.tpe}, expected: ${ptypes.length}, found: ${args.length}", tree.pos)
       case t =>
         errorType(i"${err.exprStr(fn)} does not take parameters", tree.pos)
     }

@@ -748,7 +748,8 @@ class Definitions {
 
   val StaticRootImportFns = List[() => TermRef](
     () => JavaLangPackageVal.termRef,
-    () => ScalaPackageVal.termRef
+    () => ScalaPackageVal.termRef,
+    () => PhantomPackageVal.termRef
   )
 
   val PredefImportFns = List[() => TermRef](
@@ -921,6 +922,8 @@ class Definitions {
     AnyValClass,
     NullClass,
     NothingClass,
+    PhantomAnyClass,
+    PhantomNothingClass,
     SingletonClass,
     EqualsPatternClass)
 
@@ -951,4 +954,16 @@ class Definitions {
       _isInitialized = true
     }
   }
+
+  lazy val PhantomPackageVal = ctx.requiredPackage("dotty.phantom")
+  lazy val PhantomPackageClass = PhantomPackageVal.moduleClass.asClass
+
+  lazy val PhantomAnyClass: ClassSymbol =
+    completeClass(enterCompleteClassSymbol(PhantomPackageClass, tpnme.PhantomAny, Abstract, Nil))
+  def PhantomAnyType = PhantomAnyClass.typeRef
+
+  lazy val PhantomNothingClass: ClassSymbol =
+    enterCompleteClassSymbol(PhantomPackageClass, tpnme.PhantomNothing, AbstractFinal, List(PhantomAnyType))
+  def PhantomNothingType = PhantomNothingClass.typeRef
+
 }

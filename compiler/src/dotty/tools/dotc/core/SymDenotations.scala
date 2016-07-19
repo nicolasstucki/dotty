@@ -636,9 +636,18 @@ object SymDenotations {
         // after Erasure and to avoid cyclic references caused by forcing denotations
     }
 
+    /** Is this symbol a class that extends `PhantomAny`? */
+    final def isPhantomClass(implicit ctx: Context): Boolean = {
+      val di = this.initial.asSymDenotation
+      di.isClass &&
+        di.derivesFrom(defn.PhantomAnyClass)(ctx.withPhase(di.validFor.firstPhaseId))
+      // We call derivesFrom at the initial phase both because PhantomAny does not exist
+      // after PhantomErasure and to avoid cyclic references caused by forcing denotations
+    }
+
     /** Is this symbol a class references to which that are supertypes of null? */
     final def isNullableClass(implicit ctx: Context): Boolean =
-      isClass && !isValueClass && !(this is ModuleClass) && symbol != defn.NothingClass
+      isClass && !isValueClass && !isPhantomClass && !(this is ModuleClass) && symbol != defn.NothingClass
 
     /** Is this definition accessible as a member of tree with type `pre`?
      *  @param pre          The type of the tree from which the selection is made
