@@ -470,7 +470,7 @@ object Erasure extends TypeTestsCasts{
                   .withType(defn.ArrayOf(defn.ObjectType))
                 args0 = bunchedArgs :: Nil
               }
-              val args1 = args0.zipWithConserve(mt.paramInfos)(typedExpr)
+              val args1 = args0.filterConserve(arg => !wasPhantom(arg.typeOpt)).zipWithConserve(mt.paramInfos)(typedExpr)
               untpd.cpy.Apply(tree)(fun1, args1) withType mt.resultType
             case _ =>
               throw new MatchError(i"tree $tree has unexpected type of function ${fun1.tpe.widen}, was ${fun.typeOpt.widen}")
@@ -484,6 +484,10 @@ object Erasure extends TypeTestsCasts{
     override def typedSeqLiteral(tree: untpd.SeqLiteral, pt: Type)(implicit ctx: Context) =
       super.typedSeqLiteral(tree, erasure(tree.typeOpt))
         // proto type of typed seq literal is original type;
+
+    override def typedIdent(tree: untpd.Ident, pt: Type)(implicit ctx: Context) =
+      if (tree.symbol.is(Flags.Param) && wasPhantom(tree.typeOpt)) PhantomErasure.erasedParameterRef
+      else super.typedIdent(tree, pt)
 
     override def typedIf(tree: untpd.If, pt: Type)(implicit ctx: Context) =
       super.typedIf(tree, adaptProto(tree, pt))
@@ -614,4 +618,6 @@ object Erasure extends TypeTestsCasts{
 
   def takesBridges(sym: Symbol)(implicit ctx: Context) =
     sym.isClass && !sym.is(Flags.Trait | Flags.Package)
+
+  private def wasPhantom(tp: Type)(implicit ctx: Context): Boolean = tp.isPhantom(ctx.withPhase(ctx.erasurePhase))
 }
