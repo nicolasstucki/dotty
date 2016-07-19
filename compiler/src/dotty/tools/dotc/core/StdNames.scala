@@ -229,6 +229,8 @@ object StdNames {
     final val SourceFileATTR: N             = "SourceFile"
     final val SyntheticATTR: N              = "Synthetic"
 
+    final val Phantom: N = "Phantom"
+
 // ----- Term names -----------------------------------------
 
     // Compiler-internal
