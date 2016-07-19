@@ -290,6 +290,7 @@ object Erasure extends TypeTestsCasts{
 
   class Typer extends typer.ReTyper with NoChecking {
     import Boxing._
+    import Phantom._
 
     def erasedType(tree: untpd.Tree)(implicit ctx: Context): Type = {
       val tp = tree.typeOpt
@@ -434,14 +435,8 @@ object Erasure extends TypeTestsCasts{
     override def typedTypeApply(tree: untpd.TypeApply, pt: Type)(implicit ctx: Context) = {
       val ntree = interceptTypeApply(tree.asInstanceOf[TypeApply])(ctx.withPhase(ctx.erasurePhase))
 
-      if (defn.isPhantomAssume(tree.fun.symbol)) {
-        /* All phantom types are erased to `ErasedPhantom` (an uninstantiable final abstract class),
-         * hence the only valid term for a `ErasedPhantom` is `null`.
-         * As `Phantom.assume[P <: Phantom.Any]` is the only way to instantiate phantoms, all runtime
-         * values of phantom type become `null` (no instantiation overhead).
-         */
-        Literal(Constant(null)).withType(defn.ErasedPhantomType)
-      } else ntree match {
+      if (defn.isPhantomAssume(tree.fun.symbol)) erasedPhantomTree
+      else ntree match {
         case TypeApply(fun, args) =>
           val fun1 = typedExpr(fun, WildcardType)
           fun1.tpe.widen match {
@@ -475,7 +470,8 @@ object Erasure extends TypeTestsCasts{
                 args0 = bunchedArgs :: Nil
               }
               val args1 = args0.zipWithConserve(mt.paramInfos)(typedExpr)
-              untpd.cpy.Apply(tree)(fun1, args1) withType mt.resultType
+              val args2 = args1.filterConserve(!_.typeOpt.isPhantom)
+              untpd.cpy.Apply(tree)(fun1, args2) withType mt.resultType
             case _ =>
               throw new MatchError(i"tree $tree has unexpected type of function ${fun1.tpe.widen}, was ${fun.typeOpt.widen}")
           }
@@ -488,6 +484,10 @@ object Erasure extends TypeTestsCasts{
     override def typedSeqLiteral(tree: untpd.SeqLiteral, pt: Type)(implicit ctx: Context) =
       super.typedSeqLiteral(tree, erasure(tree.typeOpt))
         // proto type of typed seq literal is original type;
+
+    override def typedIdent(tree: untpd.Ident, pt: Type)(implicit ctx: Context) =
+      if (tree.symbol.is(Flags.Param) && isErasedPhantom(tree.typeOpt)) erasedPhantomTree
+      else super.typedIdent(tree, adaptProto(tree, pt))
 
     override def typedIf(tree: untpd.If, pt: Type)(implicit ctx: Context) =
       super.typedIf(tree, adaptProto(tree, pt))
@@ -535,6 +535,7 @@ object Erasure extends TypeTestsCasts{
         vparamss1 = (tpd.ValDef(bunchedParam) :: Nil) :: Nil
         rhs1 = untpd.Block(paramDefs, rhs1)
       }
+      vparamss1 = vparamss1.mapConserve(_.filterConserve(!_.tpt.typeOpt.isPhantom))
       val ddef1 = untpd.cpy.DefDef(ddef)(
         tparams = Nil,
         vparamss = vparamss1,
@@ -721,5 +722,21 @@ object Erasure extends TypeTestsCasts{
         else if (ctx.mode is Mode.Pattern) tree // TODO: replace with assertion once pattern matcher is active
         else adaptToType(tree, pt)
       }
+
+  }
+
+  object Phantom {
+    /** Returns erased phantom term tree.
+     *
+     *  All phantom types are erased to `ErasedPhantom` (an un-instantiable final abstract class),
+     *  hence the only valid term for a `ErasedPhantom` is `null`.
+     *  As `Phantom.assume[P <: Phantom.Any]` is the only way to instantiate phantoms, all runtime
+     *  values of phantom type become `null` (no instantiation overhead).
+     */
+    def erasedPhantomTree(implicit ctx: Context) =
+      Literal(Constant(null)).withType(defn.ErasedPhantomType)
+
+    def isErasedPhantom(tpe: Type)(implicit ctx: Context): Boolean =
+      tpe.widenDealias.classSymbol eq defn.ErasedPhantomClass
   }
 }

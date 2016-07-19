@@ -11,15 +11,19 @@ object Test {
     foo
     foo
     foo = {
-      println("foo2")
+      println("foo3")
       any
     }
     foo
-
   }
 
   var foo = {
     println("foo")
+    any
+  }
+
+  foo = {
+    println("foo2")
     any
   }
 }
