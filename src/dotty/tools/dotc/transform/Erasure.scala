@@ -32,7 +32,7 @@ class Erasure extends Phase with DenotTransformer { thisTransformer =>
   override def phaseName: String = "erasure"
 
   /** List of names of phases that should precede this phase */
-  override def runsAfter: Set[Class[_ <: Phase]] = Set(classOf[InterceptedMethods], classOf[Splitter], classOf[ElimRepeated])
+  override def runsAfter: Set[Class[_ <: Phase]] = Set(classOf[PhantomDeclErasure], classOf[InterceptedMethods], classOf[Splitter], classOf[ElimRepeated])
 
   def transform(ref: SingleDenotation)(implicit ctx: Context): SingleDenotation = ref match {
     case ref: SymDenotation =>

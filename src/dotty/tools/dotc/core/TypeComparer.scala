@@ -48,8 +48,12 @@ class TypeComparer(initctx: Context) extends DotClass with ConstraintHandling {
   private var myNothingClass: ClassSymbol = null
   private var myNullClass: ClassSymbol = null
   private var myObjectClass: ClassSymbol = null
+  private var myPhantomAnyClass: ClassSymbol = null
+  private var myPhantomNothingClass: ClassSymbol = null
   private var myAnyType: TypeRef = null
   private var myNothingType: TypeRef = null
+  private var myPhantomAnyType: TypeRef = null
+  private var myPhantomNothingType: TypeRef = null
 
   def AnyClass = {
     if (myAnyClass == null) myAnyClass = defn.AnyClass
@@ -67,6 +71,14 @@ class TypeComparer(initctx: Context) extends DotClass with ConstraintHandling {
     if (myObjectClass == null) myObjectClass = defn.ObjectClass
     myObjectClass
   }
+  def PhantomAnyClass = {
+    if (myPhantomAnyClass == null) myPhantomAnyClass = defn.PhantomAnyClass
+    myPhantomAnyClass
+  }
+  def PhantomNothingClass = {
+    if (myPhantomNothingClass == null) myPhantomNothingClass = defn.PhantomNothingClass
+    myPhantomNothingClass
+  }
   def AnyType = {
     if (myAnyType == null) myAnyType = AnyClass.typeRef
     myAnyType
@@ -74,6 +86,14 @@ class TypeComparer(initctx: Context) extends DotClass with ConstraintHandling {
   def NothingType = {
     if (myNothingType == null) myNothingType = NothingClass.typeRef
     myNothingType
+  }
+  def PhantomAnyType = {
+    if (myPhantomAnyType == null) myPhantomAnyType = PhantomAnyClass.typeRef
+    myPhantomAnyType
+  }
+  def PhantomNothingType = {
+    if (myPhantomNothingType == null) myPhantomNothingType = PhantomNothingClass.typeRef
+    myPhantomNothingType
   }
 
   // Subtype testing `<:<`
@@ -518,8 +538,17 @@ class TypeComparer(initctx: Context) extends DotClass with ConstraintHandling {
             case OrType(tp1, tp2) => isNullable(tp1) || isNullable(tp2)
             case _ => false
           }
-          (tp1.symbol eq NothingClass) && tp2.isInstanceOf[ValueType] ||
-          (tp1.symbol eq NullClass) && isNullable(tp2)
+          def isPhantomType(tp: Type): Boolean = tp.dealias match {
+            case tp: TypeRef => tp.symbol.isPhantomClass
+            case tp: RefinedOrRecType => isPhantomType(tp.parent)
+            case AndType(tp1, tp2) => isPhantomType(tp1) && isPhantomType(tp2)
+            case OrType(tp1, tp2) => isPhantomType(tp1) || isPhantomType(tp2)
+            case _ => false
+          }
+          if (tp1.symbol eq NothingClass) tp2.isInstanceOf[ValueType] && !isPhantomType(tp2)
+          else if (tp1.symbol eq NullClass) isNullable(tp2) && !isPhantomType(tp2)
+          else if (tp1.symbol eq PhantomNothingClass) tp2.isInstanceOf[ValueType] && isPhantomType(tp2)
+          else false
       }
     case tp1: SingletonType =>
       /** if `tp2 == p.type` and `p: q.type` then try `tp1 <:< q.type` as a last effort.*/

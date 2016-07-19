@@ -386,7 +386,10 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
         import untpd._
         val x = tpnme.ANON_CLASS
         val clsDef = TypeDef(x, templ).withFlags(Final)
-        typed(cpy.Block(tree)(clsDef :: Nil, New(Ident(x), Nil)), pt)
+        val typedBlock = typed(cpy.Block(tree)(clsDef :: Nil, New(Ident(x), Nil)), pt)
+        if (typedBlock.tpe.derivesFrom(defn.PhantomAnyClass))
+          ctx.error("Cannot instantiate anonymous phantom classes.", tree.pos)
+        typedBlock
       case _ =>
         var tpt1 = typedType(tree.tpt)
         tpt1.tpe.dealias match {
@@ -576,6 +579,8 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
     val cond1 = typed(tree.cond, defn.BooleanType)
     val thenp1 = typed(tree.thenp, pt)
     val elsep1 = typed(tree.elsep orElse (untpd.unitLiteral withPos tree.pos), pt)
+    checkNotPhantomExpr("Cannot yield a phantom type in one of the if branches", thenp1)
+    checkNotPhantomExpr("Cannot yield a phantom type in one of the if branches", elsep1)
     val thenp2 :: elsep2 :: Nil = harmonize(thenp1 :: elsep1 :: Nil)
     assignType(cpy.If(tree)(cond1, thenp2, elsep2), thenp2, elsep2)
   }
@@ -744,6 +749,7 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
         typed(desugar.makeCaseLambda(tree.cases, protoFormals.length) withPos tree.pos, pt)
       case _ =>
         val sel1 = typedExpr(tree.selector)
+        checkNotPhantomExpr("Cannot pattern match on phantom objects", sel1)
         val selType = widenForMatchSelector(
             fullyDefinedType(sel1.tpe, "pattern selector", tree.pos))
 
@@ -814,6 +820,7 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
       val guard1 = typedExpr(tree.guard, defn.BooleanType)
       val body1 = ensureNoLocalRefs(typedExpr(tree.body, pt), pt, ctx.scope.toList)
         .ensureConforms(pt)(originalCtx) // insert a cast if body does not conform to expected type if we disregard gadt bounds
+      checkNotPhantomExpr("Pattern matches cannot return phantom objects", body1)
       assignType(cpy.CaseDef(tree)(pat1, guard1, body1), body1)
     }
 
@@ -870,6 +877,7 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
         (from, proto)
       }
     val expr1 = typedExpr(tree.expr orElse untpd.unitLiteral.withPos(tree.pos), proto)
+    checkNotPhantomExpr("Cannot use 'return' with phantom objects", expr1)
     assignType(cpy.Return(tree)(expr1, from))
   }
 
@@ -879,6 +887,7 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
     val finalizer1 = typed(tree.finalizer, defn.UnitType)
     val expr2 :: cases2x = harmonize(expr1 :: cases1)
     val cases2 = cases2x.asInstanceOf[List[CaseDef]]
+    checkNotPhantomExpr("Cannot return a phantom object in a try", expr2)
     assignType(cpy.Try(tree)(expr2, cases2, finalizer1), expr2, cases2)
   }
 
@@ -1024,10 +1033,19 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
   }
 
   def typedTypeBoundsTree(tree: untpd.TypeBoundsTree)(implicit ctx: Context): TypeBoundsTree = track("typedTypeBoundsTree") {
-    val TypeBoundsTree(lo, hi) = desugar.typeBoundsTree(tree)
+    val TypeBoundsTree(lo, hi) = tree
     val lo1 = typed(lo)
     val hi1 = typed(hi)
-    val tree1 = assignType(cpy.TypeBoundsTree(tree)(lo1, hi1), lo1, hi1)
+
+    val isPhantom = lo1.typeOpt.derivesFrom(defn.PhantomAnyClass) || hi1.typeOpt.derivesFrom(defn.PhantomAnyClass)
+
+    def typedTypeTree(phantomBound: Type, anyBound: Type): Tree =
+      typed(untpd.TypeTree(if (isPhantom) phantomBound else anyBound))
+
+    val lo2 = if (lo1.isEmpty) typedTypeTree(defn.PhantomNothingType, defn.NothingType) else lo1
+    val hi2 = if (hi1.isEmpty) typedTypeTree(defn.PhantomAnyType, defn.AnyType) else hi1
+
+    val tree1 = assignType(cpy.TypeBoundsTree(tree)(lo2, hi2), lo2, hi2)
     if (ctx.mode.is(Mode.Pattern)) {
       // Associate a pattern-bound type symbol with the wildcard.
       // The bounds of the type symbol can be constrained when comparing a pattern type
@@ -1158,6 +1176,7 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
       ctx.featureWarning(nme.dynamics.toString, "extension of type scala.Dynamic", isScala2Feature = true,
           cls, isRequired, cdef.pos)
     }
+    checkPhantomInheritance(cdef1)
     cdef1
 
     // todo later: check that
@@ -1193,21 +1212,38 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
     parents match {
       case p :: _ if p.classSymbol.isRealClass => parents
       case _ =>
-        val pcls = (defn.ObjectClass /: parents)(improve)
+        val baseClass =
+          if (parents.headOption.exists(_.derivesFrom(defn.PhantomAnyClass))) defn.PhantomAnyClass
+          else defn.ObjectClass
+        val pcls = (baseClass /: parents)(improve)
         typr.println(i"ensure first is class $parents%, % --> ${parents map (_ baseTypeWithArgs pcls)}%, %")
         val ptype = ctx.typeComparer.glb(
-            defn.ObjectType :: (parents map (_ baseTypeWithArgs pcls)))
+            baseClass.typeRef :: (parents map (_ baseTypeWithArgs pcls)))
         ptype :: parents
     }
   }
 
   /** Ensure that first parent tree refers to a real class. */
   def ensureFirstIsClass(parents: List[Tree], pos: Position)(implicit ctx: Context): List[Tree] = parents match {
+    case p :: ps if p.tpe.classSymbol.derivesFrom(defn.PhantomAnyClass) => parents // TODO add PhantomAny as first parent
     case p :: ps if p.tpe.classSymbol.isRealClass => parents
     case _ =>
       // add synthetic class type
       val first :: _ = ensureFirstIsClass(parents.tpes)
       TypeTree(checkFeasible(first, pos, em"\n in inferred parent $first")).withPos(pos) :: parents
+  }
+
+  /** Check that a class definition does not inherit from Any and PhantomAny at the same time */
+  private def checkPhantomInheritance(cdef: TypeDef)(implicit ctx: Context): Unit = {
+    def derivesFromPhantom(tp: Type): Boolean = tp.derivesFrom(defn.PhantomAnyClass)
+    val parents = cdef.tpe.parents
+    if (!parents.forall(derivesFromPhantom) && parents.exists(derivesFromPhantom)) {
+      val perfix =
+        if (cdef.symbol.flags.is(Flags.Trait)) "A trait"
+        else if (cdef.symbol.flags.is(Flags.Abstract)) "An abstract class"
+        else "A class"
+      ctx.error(perfix + " cannot extend both Any and PhantomAny.", cdef.pos)
+    }
   }
 
   /** If this is a real class, make sure its first parent is a
@@ -1415,8 +1451,34 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
 
   def typedExpr(tree: untpd.Tree, pt: Type = WildcardType)(implicit ctx: Context): Tree =
     typed(tree, pt)(ctx retractMode Mode.PatternOrType)
-  def typedType(tree: untpd.Tree, pt: Type = WildcardType)(implicit ctx: Context): Tree = // todo: retract mode between Type and Pattern?
+  def typedType(tree: untpd.Tree, pt: Type = WildcardType)(implicit ctx: Context): Tree = {
+    // todo: retract mode between Type and Pattern?
+
+    /** Check that the are not mixeds Any/PhantomAny types in `&`, `|` and type bounds */
+    def phantomsCheck(tree: untpd.Tree): Int = {
+      def phantomCheck(tree1: untpd.Tree, tree2: untpd.Tree, msg: => String, pos: Position): Int = {
+        val phantomFlags = phantomsCheck(tree1) | phantomsCheck(tree2)
+        if (phantomFlags != 3) phantomFlags
+        else {
+          ctx.error(msg, pos)
+          0 // Swallow next error
+        }
+      }
+      tree match {
+        case TypeBoundsTree(lo, hi) =>
+          phantomCheck(lo, hi, "Type can not be bounded by Any and PhantomAny at the same time", tree.pos)
+        case untpd.InfixOp(left, op, right) =>
+          phantomCheck(left, right, s"Can not mix types of Any and PhantomAny with '$op'", tree.pos)
+        case _ =>
+          if (tree.isEmpty) 0
+          else if (tree.typeOpt.derivesFrom(defn.PhantomAnyClass)) 1
+          else 2
+      }
+    }
+    phantomsCheck(tree)
+
     typed(tree, pt)(ctx addMode Mode.Type)
+  }
   def typedPattern(tree: untpd.Tree, selType: Type = WildcardType)(implicit ctx: Context): Tree =
     typed(tree, selType)(ctx addMode Mode.Pattern)
 
@@ -1789,4 +1851,10 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
       }
     }
   }
+
+  private def checkNotPhantomExpr(msg: => String, expr: Tree)(implicit ctx: Context): Unit = {
+    if (expr.tpe.derivesFrom(defn.PhantomAnyClass))
+      ctx.error(msg, expr.pos)
+  }
+
 }

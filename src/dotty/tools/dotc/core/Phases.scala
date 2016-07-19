@@ -302,6 +302,7 @@ object Phases {
 
     private var myPeriod: Period = Periods.InvalidPeriod
     private var myBase: ContextBase = null
+    private var myErasedRefPhantoms = false
     private var myErasedTypes = false
     private var myFlatClasses = false
     private var myRefChecked = false
@@ -319,6 +320,7 @@ object Phases {
     def start = myPeriod.firstPhaseId
     def end = myPeriod.lastPhaseId
 
+    final def erasedRefPhantoms = myErasedRefPhantoms // Phase is after phantom reference erasure
     final def erasedTypes = myErasedTypes   // Phase is after erasure
     final def flatClasses = myFlatClasses   // Phase is after flatten
     final def refChecked = myRefChecked     // Phase is after RefChecks
@@ -330,6 +332,7 @@ object Phases {
         assert(myPeriod == Periods.InvalidPeriod, s"phase $this has already been used once; cannot be reused")
       myBase = base
       myPeriod = Period(NoRunId, start, end)
+      myErasedRefPhantoms = prev.getClass == classOf[PhantomRefErasure] || prev.erasedRefPhantoms
       myErasedTypes  = prev.getClass == classOf[Erasure]      || prev.erasedTypes
       myFlatClasses  = prev.getClass == classOf[Flatten]      || prev.flatClasses
       myRefChecked   = prev.getClass == classOf[RefChecks]    || prev.refChecked
