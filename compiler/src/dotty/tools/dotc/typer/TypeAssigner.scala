@@ -319,7 +319,9 @@ trait TypeAssigner {
   def assignType(tree: untpd.Apply, fn: Tree, args: List[Tree])(implicit ctx: Context) = {
     val ownType = fn.tpe.widen match {
       case fntpe @ MethodType(_, ptypes) =>
-        if (sameLength(ptypes, args) || ctx.phase.prev.relaxedTyping) fntpe.instantiate(args.tpes)
+        def sameLengthAfterPhantomErasure =
+          ctx.phase.erasedPhantomTerms && sameLength(ptypes, args.filterNot(arg => arg.typeOpt.isPhantom))
+        if (sameLength(ptypes, args) || ctx.phase.prev.relaxedTyping || sameLengthAfterPhantomErasure) fntpe.instantiate(args.tpes)
         else
           errorType(i"wrong number of arguments for $fntpe: ${fn.tpe}, expected: ${ptypes.length}, found: ${args.length}", tree.pos)
       case t =>
