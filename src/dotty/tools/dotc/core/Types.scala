@@ -160,7 +160,7 @@ object Types {
         case _ =>
           false
       }
-      cls == defn.AnyClass || loop(this)
+      loop(this)
     }
 
     /** Is this type guaranteed not to have `null` as a value?

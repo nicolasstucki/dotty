@@ -49,6 +49,7 @@ class Compiler {
       List(new FirstTransform,      // Some transformations to put trees into a canonical form
            new CheckReentrant),     // Internal use only: Check that compiled program has no data races involving global vars
       List(new RefChecks,           // Various checks mostly related to abstract members and overriding
+           new PhantomChecks,       // Various checks related to phantom types
            new CheckStatic,         // Check restrictions that apply to @static members
            new ElimRepeated,        // Rewrite vararg parameters and arguments
            new NormalizeFlags,      // Rewrite some definition flags
@@ -72,6 +73,8 @@ class Compiler {
            new AugmentScala2Traits, // Expand traits defined in Scala 2.11 to simulate old-style rewritings
            new ResolveSuper,        // Implement super accessors and add forwarders to trait methods
            new ArrayConstructors),  // Intercept creation of (non-generic) arrays and intrinsify.
+      List(new PhantomRefErasure),  // Rewrite trees erasing all value references of phantom types.
+      List(new PhantomDeclErasure), // Rewrite trees erasing all phantom types declarations.
       List(new Erasure),            // Rewrite types to JVM model, erasing all type parameters, abstract types and refinements.
       List(new ElimErasedValueType, // Expand erased value types to their underlying implmementation types
            new VCElideAllocations,  // Peep-hole optimization to eliminate unnecessary value class allocations

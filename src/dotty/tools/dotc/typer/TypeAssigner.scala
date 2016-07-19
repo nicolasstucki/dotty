@@ -12,6 +12,7 @@ import config.Printers.typr
 import ast.Trees._
 import NameOps._
 import collection.mutable
+import transform.Phantoms._
 
 trait TypeAssigner {
   import tpd._
@@ -311,7 +312,9 @@ trait TypeAssigner {
   def assignType(tree: untpd.Apply, fn: Tree, args: List[Tree])(implicit ctx: Context) = {
     val ownType = fn.tpe.widen match {
       case fntpe @ MethodType(_, ptypes) =>
-        if (sameLength(ptypes, args) || ctx.phase.prev.relaxedTyping) fntpe.instantiate(args.tpes)
+        def sameLengthAfterPhantomErasure =
+          ctx.phase.erasedRefPhantoms && sameLength(ptypes, args.filterNot(arg => isPhantom(arg.typeOpt)))
+        if (sameLength(ptypes, args) || ctx.phase.prev.relaxedTyping || sameLengthAfterPhantomErasure) fntpe.instantiate(args.tpes)
         else wrongNumberOfArgs(fn.tpe, "", ptypes.length, tree.pos)
       case t =>
         errorType(i"${err.exprStr(fn)} does not take parameters", tree.pos)

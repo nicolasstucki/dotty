@@ -14,6 +14,8 @@ import util.SimpleMap
 import collection.mutable
 import ast.tpd._
 
+import scala.annotation.tailrec
+
 trait TypeOps { this: Context => // TODO: Make standalone object.
 
   /** The type `tp` as seen from prefix `pre` and owner `cls`. See the spec
@@ -183,10 +185,11 @@ trait TypeOps { this: Context => // TODO: Make standalone object.
       cs1.filter(cs2AsSet.contains)
     }
     /** The minimal set of classes in `cs` which derive all other classes in `cs` */
-    def dominators(cs: List[ClassSymbol], accu: List[ClassSymbol]): List[ClassSymbol] = (cs: @unchecked) match {
+    @tailrec def dominators(cs: List[ClassSymbol], accu: List[ClassSymbol]): List[ClassSymbol] = cs match {
       case c :: rest =>
         val accu1 = if (accu exists (_ derivesFrom c)) accu else c :: accu
         if (cs == c.baseClasses) accu1 else dominators(rest, accu1)
+      case Nil => accu
     }
     def approximateOr(tp1: Type, tp2: Type): Type = {
       def isClassRef(tp: Type): Boolean = tp match {
@@ -248,7 +251,8 @@ trait TypeOps { this: Context => // TODO: Make standalone object.
               def baseTp(cls: ClassSymbol): Type =
                 if (tp1.typeParams.nonEmpty) tp.baseTypeRef(cls)
                 else tp.baseTypeWithArgs(cls)
-              doms.map(baseTp).reduceLeft(AndType.apply)
+              if (doms.isEmpty) ErrorType // This can happen in the union of Any with PhantomAny
+              else doms.map(baseTp).reduceLeft(AndType.apply)
           }
       }
     }
