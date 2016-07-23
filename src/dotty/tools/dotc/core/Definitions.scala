@@ -656,7 +656,7 @@ class Definitions {
   lazy val UnqualifiedOwnerTypes: Set[NamedType] =
     RootImportTypes.toSet[NamedType] ++ RootImportTypes.map(_.symbol.moduleClass.typeRef)
 
-  lazy val PhantomClasses = Set[Symbol](AnyClass, AnyValClass, NullClass, NothingClass)
+  lazy val NotRuntimeClasses = Set[Symbol](AnyClass, AnyValClass, NullClass, NothingClass)
 
   def isPolymorphicAfterErasure(sym: Symbol) =
      (sym eq Any_isInstanceOf) || (sym eq Any_asInstanceOf)
@@ -729,7 +729,7 @@ class Definitions {
   def wrapArrayMethodName(elemtp: Type): TermName = {
     val cls = elemtp.classSymbol
     if (cls.isPrimitiveValueClass) nme.wrapXArray(cls.name)
-    else if (cls.derivesFrom(ObjectClass) && !cls.isPhantomClass) nme.wrapRefArray
+    else if (cls.derivesFrom(ObjectClass) && !cls.isNotRuntimeClass) nme.wrapRefArray
     else nme.genericWrapArray
   }
 
