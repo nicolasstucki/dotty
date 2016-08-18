@@ -12,6 +12,7 @@ import config.Printers._
 import ast.Trees._
 import NameOps._
 import collection.mutable
+import transform.Phantoms._
 
 trait TypeAssigner {
   import tpd._
@@ -306,7 +307,7 @@ trait TypeAssigner {
     val ownType = fn.tpe.widen match {
       case fntpe @ MethodType(_, ptypes) =>
         def sameLengthAfterPhantomErasure =
-          ctx.phase.erasedRefPhantoms && sameLength(ptypes, args.filterNot(_.typeOpt.derivesFrom(defn.PhantomAnyClass)))
+          ctx.phase.erasedRefPhantoms && sameLength(ptypes, args.filterNot(arg => isPhantom(arg.typeOpt)))
         if (sameLength(ptypes, args) || ctx.phase.prev.relaxedTyping || sameLengthAfterPhantomErasure) fntpe.instantiate(args.tpes)
         else wrongNumberOfArgs(fn.tpe, "", ptypes.length, tree.pos)
       case t =>

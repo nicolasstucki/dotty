@@ -42,6 +42,8 @@ class PhantomRefErasure extends MiniPhaseTransform with InfoTransformer {
 
   override def transformStats(trees: List[Tree])(implicit ctx: Context, info: TransformerInfo): List[Tree] = {
     trees.collect {
+      case stat: TypeDef     => stat
+      case stat: ValOrDefDef => stat
       case Block(stats, expr) if isPhantom(expr.tpe) => Block(stats, ref(defn.BoxedUnit_UNIT))
       case stat if !isPhantom(stat.tpe) => stat
     }
@@ -52,7 +54,7 @@ class PhantomRefErasure extends MiniPhaseTransform with InfoTransformer {
       case _: Ident => tree
       case qual if isPhantom(tree.tpe) =>
         // We keep the name of selected member in the name of the synthetic val to ease debugging.
-        val synthVal = SyntheticValDef(ctx.freshName("phantom$" + tree.name + "$").toTermName, tree.qualifier)
+        val synthVal = SyntheticValDef(ctx.freshName("phantomLift$" + tree.name + "$").toTermName, tree.qualifier)
         val synthValRef = Ident(synthVal.symbol.termRef)
         transform(Block(List(synthVal), Select(synthValRef, tree.name)))
 
@@ -61,20 +63,28 @@ class PhantomRefErasure extends MiniPhaseTransform with InfoTransformer {
   }
 
   override def transformApply(tree: Apply)(implicit ctx: Context, info: TransformerInfo): Tree = {
-    @tailrec def hasParams(tpe: Type): Boolean = tpe match {
-      case tpe: TermRef    => hasParams(tpe.info)
-      case tpe: MethodType => tpe.paramTypes.nonEmpty
-      case _               => false
-    }
-
-    // This transformation assumes that phantom and non phantom parameters are not mixed together
-    if (tree.args.isEmpty || hasParams(tree.fun.typeOpt)) {
+    if (returnsPhantom(tree.tpe)) {
       tree
+    } else if (!tree.args.exists(arg => isPhantom(arg.tpe))) {
+      tree.fun match {
+        case Block(stats, fun) => Block(stats, cpy.Apply(tree)(fun, tree.args))
+        case _                 => tree
+      }
     } else {
-      val args = transformStats(tree.args.map(transform))
-      val newApply = cpy.Apply(tree)(tree.fun, Nil)
-      if (args.isEmpty) newApply
-      else Block(args, newApply)
+      val synthVals = tree.args.map { arg =>
+        SyntheticValDef(ctx.freshName("phantomLift$").toTermName, arg)
+      }
+      val synthValRefs = synthVals.map(synthVal => Ident(synthVal.symbol.termRef))
+      val newArgs = synthValRefs.filter(synthValRef => !isPhantom(synthValRef.tpe))
+      val args = transformStats(synthVals)
+      tree.fun match {
+        case Block(stats, fun) =>
+          Block(stats ::: args, cpy.Apply(tree)(fun, newArgs))
+        case _ =>
+          val newApply = cpy.Apply(tree)(tree.fun, newArgs)
+          if (args.isEmpty) newApply
+          else Block(args, newApply)
+      }
     }
   }
 

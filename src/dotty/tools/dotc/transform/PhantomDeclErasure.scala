@@ -1,6 +1,7 @@
 package dotty.tools.dotc.transform
 
 import dotty.tools.dotc.ast.tpd
+import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.DenotTransformers._
 import dotty.tools.dotc.core.Flags
@@ -45,14 +46,11 @@ class PhantomDeclErasure extends MiniPhaseTransform with InfoTransformer {
   /* Tree transform */
 
   override def transformStats(trees: List[tpd.Tree])(implicit ctx: Context, info: TransformerInfo): List[tpd.Tree] = {
-    if (!ctx.owner.isClass) {
-      trees
-    } else {
-      trees.filter {
-        case tree: ValOrDefDef => !isPhantom(tree.tpt.tpe)
-        case tree: TypeDef     => !isPhantom(tree.tpe)
-        case _                 => true
-      }
+    trees.flatMap {
+      case ValDef(_, tpt, block: Block) if isPhantom(tpt.tpe) => block.stats
+      case stat: ValOrDefDef if isPhantom(stat.tpt.tpe) => Nil
+      case stat: TypeDef if isPhantom(stat.tpe) => Nil
+      case stat => List(stat)
     }
   }
 

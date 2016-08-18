@@ -31,13 +31,13 @@ object Test {
     fun3(new InkyImpl, new Pinky)
     fun3(new Pinky, Casper)
 
-    fun4(3, 4)(new BlinkyImpl, new Pinky)
-    fun4(5, 6)(new InkyImpl, new Pinky)
-    fun4(7, 8)(new Pinky, Casper)
+    fun4(3, 4, new BlinkyImpl, new Pinky)
+    fun4(5, 6, new InkyImpl, new Pinky)
+    fun4(7, 8, new Pinky, Casper)
 
-    fun5(new BlinkyImpl, new Pinky)(15, 16)
-    fun5(new InkyImpl, new Pinky)(17, 18)
-    fun5(new Pinky, Casper)(19, 20)
+    fun5(new BlinkyImpl)(15)(new Pinky)(16)
+    fun5(new InkyImpl)(17)(new Pinky)( 18)
+    fun5(new Pinky)(19)(Casper)(20)
 
     polyfun1()
 
@@ -125,11 +125,11 @@ object Test {
     println("fun2")
   }
 
-  def fun4(n: Int, n2: Int)(top: PhantomAny, bottom: Pinky): Unit = {
+  def fun4(n: Int, n2: Int, top: PhantomAny, bottom: Pinky): Unit = {
     println("fun4")
   }
 
-  def fun5(top: PhantomAny, bottom: Clyde)(n: Int, n2: Int): Unit = {
+  def fun5(top: PhantomAny)(n: Int)(bottom: Clyde)(n2: Int): Unit = {
     println("fun5")
   }
 

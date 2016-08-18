@@ -24,11 +24,10 @@ object Phantoms {
   private def erasedPhantomParametersImpl(tp: Type)(implicit ctx: Context): Type = tp match {
     case tp: JavaMethodType => tp
     case tp: MethodType =>
-      val (erasedParamNames, erasedParamTypes) =
-        if (tp.paramTypes.isEmpty || isPhantom(tp.paramTypes.head)) (Nil, Nil)
-        else (tp.paramNames, tp.paramTypes)
       val erasedResultType = erasedPhantomParametersImpl(tp.resultType)
-      if (tp.paramNames == erasedParamNames && tp.paramTypes == erasedParamTypes && tp.resultType == erasedResultType) {
+      val (erasedParamNames, erasedParamTypes) =
+        tp.paramNames.zip(tp.paramTypes).filter(tup => !isPhantom(tup._2)).unzip
+      if (tp.resultType == erasedResultType && tp.paramNames == erasedParamNames && tp.paramTypes == erasedParamTypes) {
         tp
       } else {
         tp match {

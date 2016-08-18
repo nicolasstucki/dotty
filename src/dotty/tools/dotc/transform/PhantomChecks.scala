@@ -75,12 +75,6 @@ class PhantomChecks extends MiniPhaseTransform {
   override def transformDefDef(tree: DefDef)(implicit ctx: Context, info: TransformerInfo): Tree = {
     val sym = tree.symbol
     if (!inPhantomClass(sym)) {
-      for (vparams <- tree.vparamss) {
-        val numPhantoms = vparams.count(vparam => isPhantom(vparam.tpt.typeOpt))
-        if (numPhantoms != 0 && numPhantoms != vparams.size)
-          ctx.error("Lists of parameters with both runtime and phantom values are not allowed.", vparams.head.pos)
-      }
-
       if (sym.owner.isClass) {
         val erased = erasedPhantomParameters(sym.info)
         for (decl <- sym.owner.info.decls) {
