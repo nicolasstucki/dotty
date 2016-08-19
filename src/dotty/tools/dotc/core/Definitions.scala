@@ -472,6 +472,8 @@ class Definitions {
   def MigrationAnnot(implicit ctx: Context) = MigrationAnnotType.symbol.asClass
   lazy val NativeAnnotType                   = ctx.requiredClassRef("scala.native")
   def NativeAnnot(implicit ctx: Context) = NativeAnnotType.symbol.asClass
+  lazy val PhobicAnnotType = ctx.requiredClassRef("dotty.phantom.Phobic")
+  def PhobicAnnot(implicit ctx: Context) = PhobicAnnotType.symbol.asClass
   lazy val PhantasmophobicAnnotType = ctx.requiredClassRef("dotty.phantom.Phantasmophobic")
   def PhantasmophobicAnnot(implicit ctx: Context) = PhantasmophobicAnnotType.symbol.asClass
   lazy val RemoteAnnotType                   = ctx.requiredClassRef("scala.remote")

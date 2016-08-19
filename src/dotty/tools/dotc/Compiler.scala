@@ -51,6 +51,7 @@ class Compiler {
       List(new RefChecks,           // Various checks mostly related to abstract members and overriding
            new PhantomChecks,       // Various checks related to phantom types
            new PhantasmophobicChecks, // TODO
+           new PhobicChecks,        // TODO
            new CheckStatic,         // Check restrictions that apply to @static members
            new ElimRepeated,        // Rewrite vararg parameters and arguments
            new NormalizeFlags,      // Rewrite some definition flags
