@@ -32,8 +32,6 @@ trait ConstraintHandling {
 
   private var addConstraintInvocations = 0
 
-  private var needsCleanup = false
-
   /** If the constraint is frozen we cannot add new bounds to the constraint. */
   protected var frozenConstraint = false
 
@@ -75,7 +73,7 @@ trait ConstraintHandling {
     val lower = constraint.lower(param)
     val res =
       addOneBound(param, bound, isUpper = true) &&
-      lower.forall(addOneBound(_, bound, isUpper = true))
+        lower.forall(addOneBound(_, bound, isUpper = true))
     constr.println(i"added $description = $res")
     res
   }
@@ -86,7 +84,7 @@ trait ConstraintHandling {
     val upper = constraint.upper(param)
     val res =
       addOneBound(param, bound, isUpper = false) &&
-      upper.forall(addOneBound(_, bound, isUpper = false))
+        upper.forall(addOneBound(_, bound, isUpper = false))
     constr.println(i"added $description = $res")
     res
   }
@@ -103,7 +101,7 @@ trait ConstraintHandling {
         constr.println(i"adding $description down1 = $down1, up2 = $up2")
         constraint = constraint.addLess(p1, p2)
         down1.forall(addOneBound(_, hi2, isUpper = true)) &&
-        up2.forall(addOneBound(_, lo1, isUpper = false))
+          up2.forall(addOneBound(_, lo1, isUpper = false))
       }
     constr.println(i"added $description = $res")
     res
@@ -117,14 +115,13 @@ trait ConstraintHandling {
     assert(constraint.isLess(p1, p2))
     val down = constraint.exclusiveLower(p2, p1)
     val up = constraint.exclusiveUpper(p1, p2)
-    needsCleanup = true
     constraint = constraint.unify(p1, p2)
     val bounds = constraint.nonParamBounds(p1)
     val lo = bounds.lo
     val hi = bounds.hi
     isSubType(lo, hi) &&
-    down.forall(addOneBound(_, hi, isUpper = true)) &&
-    up.forall(addOneBound(_, lo, isUpper = false))
+      down.forall(addOneBound(_, hi, isUpper = true)) &&
+      up.forall(addOneBound(_, lo, isUpper = false))
   }
 
   final def isSubTypeWhenFrozen(tp1: Type, tp2: Type): Boolean = {
@@ -248,8 +245,8 @@ trait ConstraintHandling {
       try
         c2.forallParams(p =>
           c1.contains(p) &&
-          c2.upper(p).forall(c1.isLess(p, _)) &&
-          isSubTypeWhenFrozen(c1.nonParamBounds(p), c2.nonParamBounds(p)))
+            c2.upper(p).forall(c1.isLess(p, _)) &&
+            isSubTypeWhenFrozen(c1.nonParamBounds(p), c2.nonParamBounds(p)))
       finally constraint = saved
     }
 
@@ -263,7 +260,7 @@ trait ConstraintHandling {
    *  and propagate all bounds.
    *  @param tvars   See Constraint#add
    */
-  def addToConstraint(pt: GenericType, tvars: List[TypeVar]): Unit =
+  def addToConstraint(pt: PolyType, tvars: List[TypeVar]): Unit =
     assert {
       checkPropagated(i"initialized $pt") {
         constraint = constraint.add(pt, tvars)
@@ -403,10 +400,7 @@ trait ConstraintHandling {
     val saved = constraint
     constraint =
       if (addConstraint(param, tp, fromBelow = true) &&
-          addConstraint(param, tp, fromBelow = false)) {
-        needsCleanup = true
-        constraint.replace(param, tp, canRemove = false)
-      }
+        addConstraint(param, tp, fromBelow = false)) constraint.replace(param, tp)
       else saved
     constraint ne saved
   }
@@ -430,12 +424,4 @@ trait ConstraintHandling {
     }
     result
   }
-
-  /** A new constraint with all polytypes that only have instantiated parameters removed */
-  protected def cleanup(): Unit =
-    if (needsCleanup) {
-      constraint =
-        (constraint /: constraint.domainPolys.filter(constraint.isRemovable(_)))(_.remove(_))
-      needsCleanup = false
-    }
 }
