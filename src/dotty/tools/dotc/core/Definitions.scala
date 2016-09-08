@@ -555,6 +555,11 @@ class Definitions {
     }
   }
 
+  object PhantomsFunctionOf {
+    def apply(args: List[Type], resultType: Type)(implicit ctx: Context) =
+      PhantomsFunctionType(args.length).appliedTo(args ::: resultType :: Nil)
+  }
+
   object ArrayOf {
     def apply(elem: Type)(implicit ctx: Context) =
       if (ctx.erasedTypes) JavaArrayType(elem)
@@ -754,7 +759,7 @@ class Definitions {
   // ----- Initialization ---------------------------------------------------
 
   /** Lists core classes that don't have underlying bytecode, but are synthesized on-the-fly in every reflection universe */
-  lazy val syntheticCoreClasses = List(
+  private lazy val syntheticCoreClasses = List(
     AnyClass,
     AnyRefAlias,
     RepeatedParamClass,
@@ -769,8 +774,10 @@ class Definitions {
     EmptyPackageVal,
     OpsPackageClass)
 
+    def isSyntheticCoreClass(sym: Symbol) = syntheticCoreClasses.contains(sym) || isPhantomFunctionClass(sym)
+
     /** Lists core methods that don't have underlying bytecode, but are synthesized on-the-fly in every reflection universe */
-    lazy val syntheticCoreMethods = AnyMethods ++ ObjectMethods ++ List(String_+, throwMethod)
+    private lazy val syntheticCoreMethods = AnyMethods ++ ObjectMethods ++ List(String_+, throwMethod)
 
   private[this] var _isInitialized = false
   private def isInitialized = _isInitialized
@@ -784,6 +791,8 @@ class Definitions {
     }
   }
 
+  // ----- Phantoms ---------------------------------------------------------
+
   lazy val PhantomPackageVal = ctx.requiredPackage("dotty.phantom")
   lazy val PhantomPackageClass = PhantomPackageVal.moduleClass.asClass
 
@@ -795,4 +804,46 @@ class Definitions {
     newCompleteClassSymbol(PhantomPackageClass, tpnme.PhantomNothing, AbstractFinal, List(PhantomAnyType))
   def PhantomNothingType = PhantomNothingClass.typeRef
 
+  private val phantomsFunctionClassesMap: mutable.Map[Int, ClassSymbol] = mutable.Map.empty
+  def PhantomsFunctionClass(arity: Int): ClassSymbol = {
+    assert(0 < arity)
+    if (phantomsFunctionClassesMap.contains(arity)) phantomsFunctionClassesMap(arity)
+    else {
+      val sym = mkPhantomsFunction(arity)
+      phantomsFunctionClassesMap.put(arity, sym)
+      sym
+    }
+  }
+
+  private val phantomsFunctionTypesMap: mutable.Map[Int, TypeRef] = mutable.Map.empty
+  def PhantomsFunctionType(arity: Int): TypeRef = {
+    assert(0 < arity)
+    if (phantomsFunctionTypesMap.contains(arity)) phantomsFunctionTypesMap(arity)
+    else {
+      val tpe = PhantomsFunctionClass(arity).typeRef
+      phantomsFunctionTypesMap.put(arity, tpe)
+      tpe
+    }
+  }
+
+  def isPhantomFunctionClass(sym: Symbol)(implicit ctx: Context): Boolean =
+    defn.phantomsFunctionClassesMap.valuesIterator.contains(sym)
+
+  private def mkPhantomsFunction(i: Int) = {
+    val decls = newScope
+    val cls = newCompleteClassSymbol(PhantomPackageClass, tpnme.PhantomsFunction(i), Trait, List(AnyRefType), decls)
+    def newTypeParam(name: TypeName, flags: FlagSet, bounds: TypeBounds) =
+      newSymbol(cls, name, flags | ClassTypeParamCreationFlags, bounds)
+
+    val vParamNames = (0 until i).map(j => s"p$j".toTermName).toList
+    val tParamSyms = (0 until i).map(j => newTypeParam(s"P$j".toTypeName, Contravariant, TypeBounds.emptyPhantom)).toList
+    val returnTParamSym = newTypeParam("R".toTypeName, Covariant, TypeBounds.empty)
+    val applyMethod =
+      newMethod(cls, nme.apply, MethodType(vParamNames, tParamSyms.map(_.typeRef), returnTParamSym.typeRef), Deferred)
+
+    tParamSyms.foreach(decls.enter)
+    decls.enter(returnTParamSym)
+    decls.enter(applyMethod)
+    completeClass(cls)
+  }
 }

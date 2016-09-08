@@ -1204,8 +1204,15 @@ object Types {
     def toFunctionType(dropLast: Int = 0)(implicit ctx: Context): Type = this match {
       case mt @ MethodType(_, formals) if !mt.isDependent || ctx.mode.is(Mode.AllowDependentFunctions) =>
         val formals1 = if (dropLast == 0) formals else formals dropRight dropLast
-        defn.FunctionOf(
+        val phantomCount = formals1.count(_.derivesFrom(defn.PhantomAnyClass))
+        if (phantomCount != 0) {
+          if (formals1.length != phantomCount)
+            ctx.error("Function type inputs cannot have both phantom and non phantom parameters. Consider currying the parameters.", ctx.owner.pos)
+          defn.PhantomsFunctionOf(formals1, mt.resultType)
+        } else {
+          defn.FunctionOf(
             formals1 mapConserve (_.underlyingIfRepeated(mt.isJava)), mt.resultType)
+        }
     }
 
     /** The signature of this type. This is by default NotAMethod,
@@ -3205,6 +3212,7 @@ object Types {
     def apply(lo: Type, hi: Type)(implicit ctx: Context): TypeBounds =
       unique(new RealTypeBounds(lo, hi))
     def empty(implicit ctx: Context) = apply(defn.NothingType, defn.AnyType)
+    def emptyPhantom(implicit ctx: Context) = apply(defn.PhantomNothingType, defn.PhantomAnyType)
     def upper(hi: Type)(implicit ctx: Context) = apply(defn.NothingType, hi)
     def lower(lo: Type)(implicit ctx: Context) = apply(lo, defn.AnyType)
   }
