@@ -76,7 +76,8 @@ class Compiler {
            new ResolveSuper,        // Implement super accessors and add forwarders to trait methods
            new PrimitiveForwarders, // Add forwarders to trait methods that have a mismatch between generic and primitives
            new ArrayConstructors),  // Intercept creation of (non-generic) arrays and intrinsify.
-      List(new PhantomRefErasure),  // Rewrite trees erasing all value references of phantom types.
+      List(new PhantomRefErasure,   // Rewrite trees erasing all value references of phantom types.
+           new PhantomFunctionsErasure), // Erase PhantomsFunctionN to Function0
       List(new PhantomDeclErasure), // Rewrite trees erasing all phantom types declarations.
       List(new Erasure),            // Rewrite types to JVM model, erasing all type parameters, abstract types and refinements.
       List(new ElimErasedValueType, // Expand erased value types to their underlying implmementation types

@@ -10,6 +10,7 @@ import Contexts._
 import Decorators.StringDecorator
 import util.NameTransformer
 import scala.collection.breakOut
+import scala.util.Try
 
 object StdNames {
 
@@ -228,8 +229,24 @@ object StdNames {
     final val SourceFileATTR: N             = "SourceFile"
     final val SyntheticATTR: N              = "Synthetic"
 
+    // Phantom types
     final val PhantomAny: N     = "PhantomAny"
     final val PhantomNothing: N = "PhantomNothing"
+
+    private val phantomsFunctionPrefix = "PhantomsFunction"
+
+    def PhantomsFunction(i: Int): N = phantomsFunctionPrefix + i
+
+    def isPhantomsFunction(name: Name): Boolean = {
+      val str = name.toString
+      if (str.length <= phantomsFunctionPrefix.length || !str.startsWith(phantomsFunctionPrefix)) false
+      else 0 < phantomsFunctionArity(name)
+    }
+
+    def phantomsFunctionArity(name: Name): Int = {
+      val arityString = name.toString.substring(phantomsFunctionPrefix.length)
+      Try(Integer.parseInt(arityString)).getOrElse(-1)
+    }
 
 // ----- Term names -----------------------------------------
 

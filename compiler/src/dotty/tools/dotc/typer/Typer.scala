@@ -99,6 +99,11 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
     val name = tree.name
     val noImports = ctx.mode.is(Mode.InPackageClauseName)
 
+    if (nme.isPhantomsFunction(name)) {
+      // force phantom function symbol
+      defn.PhantomsFunctionType(nme.phantomsFunctionArity(name))
+    }
+
     /** Method is necessary because error messages need to bind to
      *  to typedIdent's context which is lost in nested calls to findRef
      */
@@ -668,6 +673,7 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
     if (ctx.mode is Mode.Type) {
       val funCls =
         if (tree.isInstanceOf[untpd.ImplicitFunction]) defn.ImplicitFunctionClass(args.length)
+        else if (hasPhantomArgs(args)) defn.PhantomsFunctionClass(args.length)
         else defn.FunctionClass(args.length)
       typed(cpy.AppliedTypeTree(tree)(
         untpd.TypeTree(funCls.typeRef), args :+ body), pt)
@@ -1663,11 +1669,14 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
   def typedType(tree: untpd.Tree, pt: Type = WildcardType)(implicit ctx: Context): Tree = {
     // todo: retract mode between Type and Pattern?
 
+    // TODO remove this check form here, variant in typedFunction should be haneling it
     /** Check that the are not mixeds Any/PhantomAny types in `&`, `|` and type bounds */
+    val IsPhantom = 1
+    val IsNotPhantom = 2
     def phantomsCheck(tree: untpd.Tree): Int = {
       def phantomCheck(tree1: untpd.Tree, tree2: untpd.Tree, msg: => String, pos: Position): Int = {
         val phantomFlags = phantomsCheck(tree1) | phantomsCheck(tree2)
-        if (phantomFlags != 3) phantomFlags
+        if (phantomFlags != (IsPhantom | IsNotPhantom)) phantomFlags
         else {
           ctx.error(msg, pos)
           0 // Swallow next error
@@ -1680,8 +1689,8 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
           phantomCheck(left, right, s"Can not mix types of Any and PhantomAny with '$op'", tree.pos)
         case _ =>
           if (tree.isEmpty) 0
-          else if (tree.typeOpt.derivesFrom(defn.PhantomAnyClass)) 1
-          else 2
+          else if (tree.typeOpt.derivesFrom(defn.PhantomAnyClass)) IsPhantom
+          else IsNotPhantom
       }
     }
     phantomsCheck(tree)
@@ -2143,6 +2152,17 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
   private def checkNotPhantomExpr(msg: => String, expr: Tree)(implicit ctx: Context): Unit = {
     if (expr.tpe.derivesFrom(defn.PhantomAnyClass))
       ctx.error(msg, expr.pos)
+  }
+
+  private def hasPhantomArgs(args: List[untpd.Tree])(implicit ctx: Context): Boolean = {
+    val numPhantomArgs = args.count(typed(_).tpe.derivesFrom(defn.PhantomAnyClass))
+    val argsLength = args.length
+    val res = numPhantomArgs != 0
+    if (res && numPhantomArgs != argsLength) {
+      ctx.error("Function type inputs cannot have both phantom and non phantom parameters. Consider currying the parameters.",
+          args.head.pos)
+    }
+    res
   }
 
 }
