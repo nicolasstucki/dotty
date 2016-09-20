@@ -4,7 +4,7 @@ import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.DenotTransformers._
-import dotty.tools.dotc.core.Flags
+import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Phases._
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Types._
@@ -14,7 +14,6 @@ import scala.annotation.tailrec
 
 class PhantomDeclErasure extends MiniPhaseTransform with InfoTransformer {
   import tpd._
-  import Phantoms._
 
   override def phaseName: String = "phantomDeclErasure"
 
@@ -25,7 +24,7 @@ class PhantomDeclErasure extends MiniPhaseTransform with InfoTransformer {
   /** Check what the phase achieves, to be called at any point after it is finished. */
   override def checkPostCondition(tree: tpd.Tree)(implicit ctx: Context): Unit = {
     def assertNotPhantom(tpe: Type): Unit =
-      assert(!isPhantom(tpe), "All phantom type declarations should be erased in " + tree)
+      assert(!tpe.isPhantom, "All phantom type declarations should be erased in " + tree)
 
     tree match {
       case _: TypeTree       =>
@@ -47,30 +46,33 @@ class PhantomDeclErasure extends MiniPhaseTransform with InfoTransformer {
 
   override def transformStats(trees: List[tpd.Tree])(implicit ctx: Context, info: TransformerInfo): List[tpd.Tree] = {
     trees.flatMap {
-      case ValDef(_, tpt, block: Block) if isPhantom(tpt.tpe) => block.stats
-      case stat: ValOrDefDef if isPhantom(stat.tpt.tpe) => Nil
-      case stat: TypeDef if isPhantom(stat.tpe) => Nil
-      case stat => List(stat)
+      case ValDef(_, tpt, block: Block) if tpt.tpe.isPhantom => block.stats
+      case stat: ValOrDefDef if stat.tpt.tpe.isPhantom       => Nil
+      case stat: TypeDef if stat.tpe.isPhantom               => Nil
+      case stat                                              => List(stat)
     }
   }
 
   /* Symbol transform */
 
   def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type = tp match {
-    case tp: ClassInfo if !tp.typeSymbol.is(Flags.Package) && !isPhantom(tp.typeRef) =>
-      val newDecls = tp.decls.filteredScope(sym => !isPhantomMethodType(sym.info) && !isPhantomClassType(sym.info))
-      if (newDecls == tp.decls) tp
-      else ClassInfo(tp.prefix, tp.cls, tp.classParents, newDecls, tp.selfInfo)
+    case tp: ClassInfo =>
+      val flags = tp.typeSymbol.flags
+      if (!flags.is(Package) && !flags.is(Scala2x) && !tp.typeRef.isPhantom) {
+        val newDecls = tp.decls.filteredScope(sym => !isPhantomMethodType(sym.info) && !isPhantomClassType(sym.info))
+        if (newDecls == tp.decls) tp
+        else ClassInfo(tp.prefix, tp.cls, tp.classParents, newDecls, tp.selfInfo)
+      } else tp
     case _ => tp
   }
 
   @tailrec private def isPhantomMethodType(tpe: Type)(implicit ctx: Context): Boolean = tpe match {
-    case tpe: MethodicType => isPhantom(tpe.resultType) || isPhantomMethodType(tpe.resultType)
+    case tpe: MethodicType => tpe.resultType.isPhantom || isPhantomMethodType(tpe.resultType)
     case _                 => false
   }
 
   private def isPhantomClassType(tp: Type)(implicit ctx: Context): Boolean = tp match {
-    case tp: ClassInfo => tp.cls.derivesFrom(defn.PhantomAnyClass)
+    case tp: ClassInfo => tp.cls.isPhantomClass
     case _             => false
   }
 

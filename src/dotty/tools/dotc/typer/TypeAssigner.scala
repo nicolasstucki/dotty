@@ -313,7 +313,7 @@ trait TypeAssigner {
     val ownType = fn.tpe.widen match {
       case fntpe @ MethodType(_, ptypes) =>
         def sameLengthAfterPhantomErasure =
-          ctx.phase.erasedRefPhantoms && sameLength(ptypes, args.filterNot(arg => isPhantom(arg.typeOpt)))
+          ctx.phase.erasedRefPhantoms && sameLength(ptypes, args.filterNot(arg => arg.typeOpt.isPhantom))
         if (sameLength(ptypes, args) || ctx.phase.prev.relaxedTyping || sameLengthAfterPhantomErasure) fntpe.instantiate(args.tpes)
         else wrongNumberOfArgs(fn.tpe, "", ptypes.length, tree.pos)
       case t =>

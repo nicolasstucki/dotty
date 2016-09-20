@@ -36,7 +36,7 @@ class PhantomChecks extends MiniPhaseTransform {
     }
 
     def check(tp: Type): Unit = {
-      assert(!(isPhantom(tree.tpe) && tree.tpe.derivesFrom(defn.AnyClass)),
+      assert(!(tree.tpe.isPhantom && tree.tpe.derivesFrom(defn.AnyClass)),
           "Types can't be subtype of both PhantomAny and Any: $tp")
     }
 
@@ -63,7 +63,7 @@ class PhantomChecks extends MiniPhaseTransform {
           case _: ValOrDefDef => // OK
           case Apply(Trees.Select(_: This, name), _) if name == nme.CONSTRUCTOR =>
             // avoid double error in phantom class secondary constructor
-          case tree if isPhantom(tree.tpe) =>
+          case tree if tree.tpe.isPhantom =>
             ctx.error("Expression returning a phantom type can not be in statement position.", tree.pos)
           case _ => // OK
         }
@@ -85,7 +85,7 @@ class PhantomChecks extends MiniPhaseTransform {
     } else if (!sym.isConstructor) {
       if (!sym.owner.is(Flags.Module))
         ctx.error("Can not define methods in phantom class.", tree.pos)
-      else if (!isPhantom(tree.tpt.tpe))
+      else if (!tree.tpt.tpe.isPhantom)
         ctx.error("Phantom modules can only have methods that return a phantom value.", tree.pos)
     } else if (!sym.isPrimaryConstructor) {
       ctx.error("Can not have secondary constructors in phantom class.", tree.pos)
@@ -93,7 +93,7 @@ class PhantomChecks extends MiniPhaseTransform {
       ctx.error("Can not have parameters in constructor of a phantom class.", tree.pos)
     }
 
-    if (isPhantom(tree.tpt.tpe)) {
+    if (tree.tpt.tpe.isPhantom) {
       @tailrec def checkForStats(t: Tree): Unit = t match {
         case Block(stats, expr) =>
           for (stat <- stats)
@@ -116,7 +116,7 @@ class PhantomChecks extends MiniPhaseTransform {
     if (inPhantomClass(sym)) {
       if (!sym.is(Flags.ParamAccessor))
         ctx.error(s"Phantom classes can not have '$keyword' fields.", tree.pos)
-    } else if (!sym.is(Flags.Param) && !sym.is(Flags.ParamAccessor) && !sym.is(Flags.Module) && isPhantom(tree.tpt.tpe)) {
+    } else if (!sym.is(Flags.Param) && !sym.is(Flags.ParamAccessor) && !sym.is(Flags.Module) && tree.tpt.tpe.isPhantom) {
       ctx.error(s"Can not define '$keyword' fields with phantom values.", tree.pos)
     }
 

@@ -163,6 +163,25 @@ object Types {
       loop(this)
     }
 
+    final def isPhantom(implicit ctx: Context): Boolean = {
+      def loop(tp: Type) = tp match {
+        case tp: TypeRef =>
+          val sym = tp.symbol
+          if (sym.flags.is(Scala2x)) false
+          else if (sym.isClass) sym.derivesFrom(defn.PhantomAnyClass)
+          else tp.superType.isPhantom
+        case tp: TypeProxy =>
+          tp.underlying.isPhantom
+        case tp: AndType =>
+          tp.tp1.isPhantom
+        case tp: OrType =>
+          tp.tp1.isPhantom
+        case _ =>
+          false
+      }
+      loop(this)
+    }
+
     /** Is this type guaranteed not to have `null` as a value?
      *  For the moment this is only true for modules, but it could
      *  be refined later.
