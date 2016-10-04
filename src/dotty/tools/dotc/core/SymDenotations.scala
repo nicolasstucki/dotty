@@ -110,7 +110,7 @@ object SymDenotations {
 
     //assert(symbol.id != 4940, name)
     if (ownerIfExists.toString.contains("RichBoolean") && name.toString =="hashCode")
-      println("dd")
+      println(">> RichBoolean.hashCode")
 
 
     override def hasUniqueSym: Boolean = exists

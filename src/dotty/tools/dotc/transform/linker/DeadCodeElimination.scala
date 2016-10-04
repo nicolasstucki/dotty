@@ -56,7 +56,12 @@ class DeadCodeElimination extends MiniPhaseTransform {
     val keepAsNew = tree.symbol.initial.validFor.firstPhaseId > keepAfter.period.phaseId
     if (tree.symbol.isConstructor || keepAsNew || reachableSet.contains(tree.symbol)) tree
     else {
-      tpd.cpy.DefDef(tree)(rhs = exception)
+      val a = List("GenMapFactory", "MutableMapFactory", "TraversableOnce", "TraversableLike", "Option", "Vector", "Some", "None")
+      if (a.exists(c => tree.symbol.owner.show.contains(c)))
+        tree
+      else {
+        tpd.cpy.DefDef(tree)(rhs = exception)
+      }
     }
   }
 
