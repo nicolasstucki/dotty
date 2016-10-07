@@ -3230,7 +3230,7 @@ object Types {
 
   /** An annotated type tpe @ annot */
   case class AnnotatedType(tpe: Type, annot: Annotation)
-      extends UncachedProxyType with ValueType {
+      extends CachedProxyType with ValueType {
     // todo: cache them? but this makes only sense if annotations and trees are also cached.
     override def underlying(implicit ctx: Context): Type = tpe
     def derivedAnnotatedType(tpe: Type, annot: Annotation) =
@@ -3240,6 +3240,8 @@ object Types {
     override def stripTypeVar(implicit ctx: Context): Type =
       derivedAnnotatedType(tpe.stripTypeVar, annot)
     override def stripAnnots(implicit ctx: Context): Type = tpe.stripAnnots
+
+    override def computeHash: Int = doHash(annot, tpe)
   }
 
   object AnnotatedType {
