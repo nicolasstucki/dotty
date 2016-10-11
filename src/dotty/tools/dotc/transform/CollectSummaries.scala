@@ -933,7 +933,7 @@ class BuildCallGraph extends Phase {
             // without casts
             val dirrect =
               for (tp <- getTypesByMemberName(calleeSymbol.name)
-                   if filterTypes(tp.tp, recieverType);
+                   if filterTypes(tp.tp, recieverType.widenDealias);
                    alt <- tp.tp.member(calleeSymbol.name).altsWith(p => p.asSeenFrom(tp.tp).matches(calleeSymbol.asSeenFrom(tp.tp)))
                    if alt.exists
               )
