@@ -383,11 +383,17 @@ class CollectSummaries extends MiniPhase { thisTransform =>
         case _ => Nil
       }
 
-      if (tree.toString.contains("Foo")) {
-        println(tree)
+      val moduleInit = tree match {
+        case Select(qualifier, name) =>
+          val sym = tree.tpe.widenDealias.classSymbol
+          if (sym.is(Module) && !sym.is(JavaDefined))
+            List(CallInfo(TermRef(tree.tpe.widenDealias, sym.requiredMethod(nme.CONSTRUCTOR, Nil)), Nil, Nil))
+          else
+            Nil
+        case _ => Nil
       }
 
-      val languageDefinedCalls = repeatedArgsCalls ::: fillInStackTrace ::: initialValues ::: javaAccessible
+      val languageDefinedCalls = repeatedArgsCalls ::: fillInStackTrace ::: initialValues ::: javaAccessible ::: moduleInit
 
       curMethodSummary.methodsCalled(storedReciever) = thisCallInfo :: languageDefinedCalls ::: curMethodSummary.methodsCalled.getOrElse(storedReciever, Nil)
     }
