@@ -47,6 +47,7 @@ class tests extends CompilerTest {
   val negDir        = testsDir + "neg/"
   val runDir        = testsDir + "run/"
   val linkDir       = testsDir + "link/"
+  val linkWithStdlibDir = testsDir + "stdlib-link/"
   val newDir        = testsDir + "new/"
   val replDir       = testsDir + "repl/"
 
@@ -162,7 +163,10 @@ class tests extends CompilerTest {
 
   @Test def link_all = runFiles(linkDir, List("-link-dce"))
 
-  val stdlibFiles = Source.fromFile("./test/dotc/scala-collections.whitelist", "UTF8").getLines()
+  @Test def link_with_stdlib_all =
+    runFiles(linkWithStdlibDir, List("-link-dce", "-language:Scala2"), extraFiles = stdlibFiles.map("../../" + _))
+
+  private val stdlibFiles: List[String] = Source.fromFile("./test/dotc/scala-collections.whitelist", "UTF8").getLines()
    .map(_.trim) // allow identation
    .filter(!_.startsWith("#")) // allow comment lines prefixed by #
    .map(_.takeWhile(_ != '#').trim) // allow comments in the end of line
