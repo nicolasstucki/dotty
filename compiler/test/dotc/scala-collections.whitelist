@@ -538,3 +538,6 @@
 ../scala-scala/src/library/scala/runtime/SeqCharSequence.scala
 ../scala-scala/src/library/scala/runtime/StringAdd.scala
 ../scala-scala/src/library/scala/runtime/StringFormat.scala
+
+../scala-scala/src/library/scala/Function.scala
+../scala-scala/src/library/scala/Function0.scala

@@ -138,9 +138,9 @@
 # assertion failed
 
 
-../scala-scala/src/library/scala/Function.scala
-../scala-scala/src/library/scala/Function0.scala
 ../scala-scala/src/library/scala/Function1.scala
+# assertion failed: duplicate class Function1#14914; previous was class Function1#14919
+
 ../scala-scala/src/library/scala/Function10.scala
 ../scala-scala/src/library/scala/Function11.scala
 ../scala-scala/src/library/scala/Function12.scala
