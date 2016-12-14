@@ -1,7 +1,10 @@
 ../scala-scala/src/library/scala/annotation/unchecked/uncheckedVariance.scala
 
 ../scala-scala/src/library/scala/AnyVal.scala
-../scala-scala/src/library/scala/App.scala
+# 55 |abstract class AnyVal extends Any {
+#    |^
+#    |illegal redefinition of standard class AnyVal
+
 
 ../scala-scala/src/library/scala/collection/convert/Wrappers.scala
 # 34 |    def remove() = throw new UnsupportedOperationException

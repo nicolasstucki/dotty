@@ -541,3 +541,5 @@
 
 ../scala-scala/src/library/scala/Function.scala
 ../scala-scala/src/library/scala/Function0.scala
+
+../scala-scala/src/library/scala/App.scala
