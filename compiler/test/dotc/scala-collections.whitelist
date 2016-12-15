@@ -290,6 +290,7 @@
 ../scala-scala/src/library/scala/util/DynamicVariable.scala
 ../scala-scala/src/library/scala/util/Either.scala
 ../scala-scala/src/library/scala/util/hashing/ByteswapHashing.scala
+../scala-scala/src/library/scala/util/hashing/Hashing.scala
 ../scala-scala/src/library/scala/util/hashing/MurmurHash3.scala
 ../scala-scala/src/library/scala/util/hashing/package.scala
 ../scala-scala/src/library/scala/util/matching/Regex.scala
@@ -370,6 +371,7 @@
 ../scala-scala/src/library/scala/collection/convert/package.scala
 ../scala-scala/src/library/scala/collection/convert/WrapAsJava.scala
 ../scala-scala/src/library/scala/collection/convert/WrapAsScala.scala
+../scala-scala/src/library/scala/collection/convert/Wrappers.scala
 
 ../scala-scala/src/library/scala/collection/concurrent/Map.scala
 ../scala-scala/src/library/scala/collection/concurrent/TrieMap.scala
@@ -389,6 +391,7 @@
 ../scala-scala/src/library/scala/sys/package.scala
 ../scala-scala/src/library/scala/sys/Prop.scala
 ../scala-scala/src/library/scala/sys/PropImpl.scala
+../scala-scala/src/library/scala/sys/BooleanProp.scala
 ../scala-scala/src/library/scala/sys/ShutdownHookThread.scala
 ../scala-scala/src/library/scala/sys/process/BasicIO.scala
 ../scala-scala/src/library/scala/sys/process/package.scala
@@ -442,6 +445,7 @@
 ../scala-scala/src/library/scala/concurrent/duration/DurationConversions.scala
 ../scala-scala/src/library/scala/concurrent/duration/package.scala
 ../scala-scala/src/library/scala/concurrent/ExecutionContext.scala
+../scala-scala/src/library/scala/concurrent/Future.scala
 ../scala-scala/src/library/scala/concurrent/FutureTaskRunner.scala
 ../scala-scala/src/library/scala/concurrent/impl/Future.scala
 ../scala-scala/src/library/scala/concurrent/impl/Promise.scala
@@ -466,6 +470,9 @@
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParSet.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParSetLike.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/UnrolledParArrayCombiner.scala
+
+../scala-scala/src/library/scala/collection/parallel/package.scala
+../scala-scala/src/library/scala/collection/parallel/ParIterable.scala
 ../scala-scala/src/library/scala/collection/parallel/ParSeq.scala
 ../scala-scala/src/library/scala/collection/parallel/ParSet.scala
 ../scala-scala/src/library/scala/collection/parallel/ParSetLike.scala
@@ -543,3 +550,26 @@
 ../scala-scala/src/library/scala/Function0.scala
 
 ../scala-scala/src/library/scala/App.scala
+
+../scala-scala/src/library/scala/Tuple1.scala
+../scala-scala/src/library/scala/Tuple2.scala
+../scala-scala/src/library/scala/Tuple3.scala
+../scala-scala/src/library/scala/Tuple4.scala
+../scala-scala/src/library/scala/Tuple5.scala
+../scala-scala/src/library/scala/Tuple6.scala
+../scala-scala/src/library/scala/Tuple7.scala
+../scala-scala/src/library/scala/Tuple8.scala
+../scala-scala/src/library/scala/Tuple9.scala
+../scala-scala/src/library/scala/Tuple10.scala
+../scala-scala/src/library/scala/Tuple11.scala
+../scala-scala/src/library/scala/Tuple12.scala
+../scala-scala/src/library/scala/Tuple13.scala
+../scala-scala/src/library/scala/Tuple14.scala
+../scala-scala/src/library/scala/Tuple15.scala
+../scala-scala/src/library/scala/Tuple16.scala
+../scala-scala/src/library/scala/Tuple17.scala
+../scala-scala/src/library/scala/Tuple18.scala
+../scala-scala/src/library/scala/Tuple19.scala
+../scala-scala/src/library/scala/Tuple20.scala
+../scala-scala/src/library/scala/Tuple21.scala
+../scala-scala/src/library/scala/Tuple22.scala

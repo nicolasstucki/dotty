@@ -5,13 +5,6 @@
 #    |^
 #    |illegal redefinition of standard class AnyVal
 
-
-../scala-scala/src/library/scala/collection/convert/Wrappers.scala
-# 34 |    def remove() = throw new UnsupportedOperationException
-#    |        ^
-#    |        overriding method remove in trait Iterator of type ()Unit;
-#    |         method remove of type ()Unit needs `override' modifier
-
 ../scala-scala/src/library/scala/collection/generic/ParSetFactory.scala
 
 ../scala-scala/src/library/scala/collection/mutable/DefaultEntry.scala
@@ -88,20 +81,14 @@
 #     |    ^^^^^^^^^^^
 #     |    value `iterated` is not a member of scala.collection.concurrent.TrieMapIterator[K, V](it)
 
-../scala-scala/src/library/scala/collection/parallel/package.scala
-# 75 |    implicit def factory2ops[From, Elem, To](bf: CanBuildFrom[From, Elem, To]) = new FactoryOps[From, Elem, To] {
-#     |    ^
-#     |    result type of implicit definition needs to be given explicitly
-
-../scala-scala/src/library/scala/collection/parallel/ParIterable.scala
-# 304 |  protected implicit def task2ops[R, Tp](tsk: SSCTask[R, Tp]) = new TaskOps[R, Tp] {
-#     |  ^
-#     |  result type of implicit definition needs to be given explicitly
-
 ../scala-scala/src/library/scala/collection/parallel/ParIterableLike.scala
-# 324 |  protected implicit def delegatedSignalling2ops[PI <: DelegatedSignalling](it: PI) = new SignallingOps[PI] {
-#     |  ^
-#     |  result type of implicit definition needs to be given explicitly
+# assertion failed: found:    => scala.collection.parallel.Combiner[(U, S), That](ParIterableLike.this.BuilderOps[(U, S), That]#asCombiner)
+#   required: scala.collection.parallel.Combiner[(Any, S), That]
+#   tree = this.builder2ops[(U, S)^, That^](bf.apply(this.repr)).asCombiner, took 19.88 sec
+#       at scala.Predef$.assert(Predef.scala:165)
+#       at dotty.tools.dotc.transform.TreeChecker$Checker.adapt(TreeChecker.scala:452)
+#       at dotty.tools.dotc.typer.Typer$$anonfun$typed$2.apply(Typer.scala:1529)
+#       at dotty.tools.dotc.typer.Typer$$anonfun$typed$2.apply(Typer.scala:1527)
 
 ../scala-scala/src/library/scala/collection/parallel/ParMap.scala
 ../scala-scala/src/library/scala/collection/parallel/ParMapLike.scala
@@ -120,11 +107,6 @@
 # 429 |    fjtask.body.result
 #    |    ^^^^^^^^^^^
 #    |    value `body` is not a member of ForkJoinTasks.this.WrappedTask[R, Tp](fjtask)
-
-../scala-scala/src/library/scala/concurrent/Future.scala
-# 188 |    implicit val ec = internalExecutor
-#     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#     |    type of implicit definition needs to be given explicitly
 
 ../scala-scala/src/library/scala/concurrent/SyncChannel.scala
 # 45 |    writeReq.get
@@ -220,37 +202,11 @@
 #     |                                      ^^^^^
 #     |                                      not found: macro
 
-../scala-scala/src/library/scala/sys/BooleanProp.scala
-# dotty.tools.dotc.reporting.diagnostic.messages$Error: method clear is already defined as getter clear: ()scala.runtime.BoxedUnit
-
 ../scala-scala/src/library/scala/text/Document.scala
 
-../scala-scala/src/library/scala/Tuple1.scala
 # 19 |case class Tuple1[@specialized(Int, Long, Double) +T1](_1: T1)
 #    |                                                       ^
 #    |                                                       value _1 is already defined as method _1: => T1
-
-../scala-scala/src/library/scala/Tuple10.scala
-../scala-scala/src/library/scala/Tuple11.scala
-../scala-scala/src/library/scala/Tuple12.scala
-../scala-scala/src/library/scala/Tuple13.scala
-../scala-scala/src/library/scala/Tuple14.scala
-../scala-scala/src/library/scala/Tuple15.scala
-../scala-scala/src/library/scala/Tuple16.scala
-../scala-scala/src/library/scala/Tuple17.scala
-../scala-scala/src/library/scala/Tuple18.scala
-../scala-scala/src/library/scala/Tuple19.scala
-../scala-scala/src/library/scala/Tuple2.scala
-../scala-scala/src/library/scala/Tuple20.scala
-../scala-scala/src/library/scala/Tuple21.scala
-../scala-scala/src/library/scala/Tuple22.scala
-../scala-scala/src/library/scala/Tuple3.scala
-../scala-scala/src/library/scala/Tuple4.scala
-../scala-scala/src/library/scala/Tuple5.scala
-../scala-scala/src/library/scala/Tuple6.scala
-../scala-scala/src/library/scala/Tuple7.scala
-../scala-scala/src/library/scala/Tuple8.scala
-../scala-scala/src/library/scala/Tuple9.scala
 
 ../scala-scala/src/library/scala/util/control/Exception.scala
 # scala.MatchError: PostfixOp(Select(Ident(pf),isDefinedAt),_) (of class dotty.tools.dotc.ast.untpd$PostfixOp)
@@ -258,12 +214,6 @@
 
 ../scala-scala/src/library/scala/util/control/TailCalls.scala
 # assertion failed
-
-../scala-scala/src/library/scala/util/hashing/Hashing.scala
-# 35 |  implicit def default[T] = new Default[T]
-#    |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#    |  result type of implicit definition needs to be given explicitly
-
 
 ../scala-scala/src/library/scala/sys/SystemProperties.scala
 # crashes on dotty.tools.dottydoc.TestWhitelistedCollections.arrayHasDocumentation
