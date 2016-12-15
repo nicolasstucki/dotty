@@ -310,6 +310,7 @@
 ../scala-scala/src/library/scala/collection/mutable/Buffer.scala
 ../scala-scala/src/library/scala/collection/mutable/BufferProxy.scala
 ../scala-scala/src/library/scala/collection/mutable/Cloneable.scala
+../scala-scala/src/library/scala/collection/mutable/DefaultEntry.scala
 ../scala-scala/src/library/scala/collection/mutable/DefaultMapModel.scala
 ../scala-scala/src/library/scala/collection/mutable/DoubleLinkedList.scala
 ../scala-scala/src/library/scala/collection/mutable/DoubleLinkedListLike.scala
@@ -319,6 +320,7 @@
 ../scala-scala/src/library/scala/collection/mutable/HashSet.scala
 ../scala-scala/src/library/scala/collection/mutable/HashTable.scala
 ../scala-scala/src/library/scala/collection/mutable/History.scala
+../scala-scala/src/library/scala/collection/mutable/ImmutableMapAdaptor.scala
 ../scala-scala/src/library/scala/collection/mutable/ImmutableSetAdaptor.scala
 ../scala-scala/src/library/scala/collection/mutable/IndexedSeqLike.scala
 ../scala-scala/src/library/scala/collection/mutable/IndexedSeqOptimized.scala
@@ -329,6 +331,7 @@
 ../scala-scala/src/library/scala/collection/mutable/LinkedHashSet.scala
 ../scala-scala/src/library/scala/collection/mutable/LinkedList.scala
 ../scala-scala/src/library/scala/collection/mutable/LinkedListLike.scala
+../scala-scala/src/library/scala/collection/mutable/LinkedHashMap.scala
 ../scala-scala/src/library/scala/collection/mutable/ListMap.scala
 ../scala-scala/src/library/scala/collection/mutable/LongMap.scala
 ../scala-scala/src/library/scala/collection/mutable/Map.scala
@@ -337,6 +340,8 @@
 ../scala-scala/src/library/scala/collection/mutable/MapProxy.scala
 ../scala-scala/src/library/scala/collection/mutable/MultiMap.scala
 ../scala-scala/src/library/scala/collection/mutable/MutableList.scala
+../scala-scala/src/library/scala/collection/mutable/ObservableBuffer.scala
+../scala-scala/src/library/scala/collection/mutable/ObservableSet.scala
 ../scala-scala/src/library/scala/collection/mutable/OpenHashMap.scala
 ../scala-scala/src/library/scala/collection/mutable/PriorityQueue.scala
 ../scala-scala/src/library/scala/collection/mutable/PriorityQueueProxy.scala
@@ -358,11 +363,13 @@
 ../scala-scala/src/library/scala/collection/mutable/Subscriber.scala
 ../scala-scala/src/library/scala/collection/mutable/SynchronizedMap.scala
 ../scala-scala/src/library/scala/collection/mutable/SynchronizedPriorityQueue.scala
+../scala-scala/src/library/scala/collection/mutable/SynchronizedQueue.scala
 ../scala-scala/src/library/scala/collection/mutable/SynchronizedSet.scala
 ../scala-scala/src/library/scala/collection/mutable/SynchronizedStack.scala
 ../scala-scala/src/library/scala/collection/mutable/Traversable.scala
 ../scala-scala/src/library/scala/collection/mutable/TreeSet.scala
 ../scala-scala/src/library/scala/collection/mutable/Undoable.scala
+../scala-scala/src/library/scala/collection/mutable/UnrolledBuffer.scala
 ../scala-scala/src/library/scala/collection/mutable/WeakHashMap.scala
 
 ../scala-scala/src/library/scala/collection/convert/DecorateAsJava.scala
@@ -411,8 +418,10 @@
 ../scala-scala/src/library/scala/beans/ScalaBeanInfo.scala
 
 ../scala-scala/src/library/scala/io/AnsiColor.scala
+../scala-scala/src/library/scala/io/BufferedSource.scala
 ../scala-scala/src/library/scala/io/Codec.scala
 ../scala-scala/src/library/scala/io/Position.scala
+../scala-scala/src/library/scala/io/Source.scala
 ../scala-scala/src/library/scala/io/StdIn.scala
 
 ../scala-scala/src/library/scala/math/BigDecimal.scala
@@ -424,10 +433,11 @@
 ../scala-scala/src/library/scala/ref/ReferenceQueue.scala
 ../scala-scala/src/library/scala/ref/ReferenceWrapper.scala
 ../scala-scala/src/library/scala/ref/SoftReference.scala
+../scala-scala/src/library/scala/ref/WeakReference.scala
 
 ../scala-scala/src/library/scala/reflect/macros/internal/macroImpl.scala
-../scala-scala/src/library/scala/reflect/NoManifest.scala
 ../scala-scala/src/library/scala/reflect/OptManifest.scala
+../scala-scala/src/library/scala/reflect/NoManifest.scala
 
 ../scala-scala/src/library/scala/Responder.scala
 
@@ -453,6 +463,7 @@
 ../scala-scala/src/library/scala/concurrent/Lock.scala
 ../scala-scala/src/library/scala/concurrent/ManagedBlocker.scala
 ../scala-scala/src/library/scala/concurrent/Promise.scala
+../scala-scala/src/library/scala/concurrent/SyncChannel.scala
 ../scala-scala/src/library/scala/concurrent/SyncVar.scala
 ../scala-scala/src/library/scala/concurrent/TaskRunner.scala
 ../scala-scala/src/library/scala/concurrent/ThreadPoolRunner.scala
@@ -460,15 +471,19 @@
 ../scala-scala/src/library/scala/collection/parallel/Combiner.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/LazyCombiner.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/package.scala
+../scala-scala/src/library/scala/collection/parallel/mutable/ParArray.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParFlatHashTable.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParHashMap.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParHashSet.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParHashTable.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParIterable.scala
+../scala-scala/src/library/scala/collection/parallel/mutable/ParMap.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParMapLike.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParSeq.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParSet.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParSetLike.scala
+../scala-scala/src/library/scala/collection/parallel/mutable/ParTrieMap.scala
+../scala-scala/src/library/scala/collection/parallel/mutable/ResizableParArrayCombiner.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/UnrolledParArrayCombiner.scala
 
 ../scala-scala/src/library/scala/collection/parallel/package.scala
@@ -477,6 +492,7 @@
 ../scala-scala/src/library/scala/collection/parallel/ParSet.scala
 ../scala-scala/src/library/scala/collection/parallel/ParSetLike.scala
 ../scala-scala/src/library/scala/collection/parallel/PreciseSplitter.scala
+../scala-scala/src/library/scala/collection/parallel/RemainsIterator.scala
 ../scala-scala/src/library/scala/collection/parallel/Splitter.scala
 ../scala-scala/src/library/scala/collection/parallel/TaskSupport.scala
 

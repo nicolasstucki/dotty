@@ -6,80 +6,17 @@
 #    |illegal redefinition of standard class AnyVal
 
 ../scala-scala/src/library/scala/collection/generic/ParSetFactory.scala
-
-../scala-scala/src/library/scala/collection/mutable/DefaultEntry.scala
-# 22 |    "(kv: " + key + ", " + value + ")" + (if (next != null) " -> " + next.toString else "")
-#    |                                                                     ^^^^
-#    |                                                                     cyclic reference involving method toString
-
-../scala-scala/src/library/scala/collection/mutable/ImmutableMapAdaptor.scala
-# 78 |  override def toString() = imap.toString()
-#    |                            ^^^^^^^^^^^^^^^
-#    |                            missing argument for parameter index of method apply: (index: Int)Char
-
-../scala-scala/src/library/scala/collection/mutable/LinkedHashMap.scala
-#  102 |  protected class FilteredKeys(p: A => Boolean) extends super.FilteredKeys(p) {
-#      |                                                        ^^^^^^^^^^^^^^^^^^^^
-#      |                                                        cyclic inheritance: class FilteredKeys extends itself
-# ...
-
-../scala-scala/src/library/scala/collection/mutable/ObservableBuffer.scala
-#  73 |    })
-#     |     ^
-#     |     found:    scala.collection.script.Reset with scala.collection.mutable.Undoable{...}
-#     |     required: scala.collection.script.Message[A] & scala.collection.mutable.Undoable
-# ...
+#  assertion failed
+# at dotty.tools.dotc.core.TypeComparer.dotty$tools$dotc$core$TypeComparer$$monitoredIsSubType(TypeComparer.scala:141)
 
 ../scala-scala/src/library/scala/collection/mutable/ObservableMap.scala
-#  68 |    })
-#     |     ^
-#     |     found:    scala.collection.script.Reset with scala.collection.mutable.Undoable{...}
-#     |     required: scala.collection.script.Message[(A, B)] & scala.collection.mutable.Undoable
-
-../scala-scala/src/library/scala/collection/mutable/ObservableSet.scala
-# 52 |    })
-#    |     ^
-#    |     found:    scala.collection.script.Reset with scala.collection.mutable.Undoable{...}
-#    |     required: scala.collection.script.Message[A] & scala.collection.mutable.Undoable
-
-../scala-scala/src/library/scala/collection/mutable/SynchronizedQueue.scala
-# 102 |  override def toString() = synchronized { super.toString() }
-#      |                                           ^^^^^^^^^^^^^^^^
-#      |                                        missing argument for parameter index of method apply: (index: Int)Char
-
-../scala-scala/src/library/scala/collection/mutable/UnrolledBuffer.scala
-# 347 |    override def toString = array.take(size).mkString("Unrolled[" + array.length + "](", ", ", ")") + " -> " + (if (next ne null) next.toString else "")
-#     |                                                                                                                                  ^^^^
-#     |                                                                    cyclic reference involving method toString
+# assertion failed: data race? overwriting symbol of type ((kv: (A, B))scala.collection.mutable.ObservableMap[A, B](ObservableMap.this))(ObservableMap.this.super$+=)
 
 ../scala-scala/src/library/scala/collection/mutable/SynchronizedBuffer.scala
-# assertion failed
-
-../scala-scala/src/library/scala/collection/parallel/mutable/ParArray.scala
-# 648 |  class Map[S](f: T => S, targetarr: Array[Any], offset: Int, howmany: Int) extends Task[Unit, Map[S]] {
-#     |        ^
-#     |        overriding class Map in trait ParIterableLike;
-#     |         class Map cannot be used here - class definitions cannot be overridden
-
-../scala-scala/src/library/scala/collection/parallel/mutable/ParMap.scala
-# 42 |  override def updated [U >: V](key: K, value: U): ParMap[K, U] = this + ((key, value))
-#    |                                                                  ^^^^^^^^^^^^^^^^^^^^^
-#    |                                                       found:    scala.collection.parallel.ParMap[K, U]
-#    |                                                       required: scala.collection.parallel.mutable.ParMap'[K, U]
-#    |
-#    |                                                       where:    ParMap  is a trait in package parallel
-#    |                                                                 ParMap' is a trait in package mutable
-
-
-../scala-scala/src/library/scala/collection/parallel/mutable/ResizableParArrayCombiner.scala
-# 91 |    new { val chain = c } with ResizableParArrayCombiner[T] // was: with EnvironmentPassingCombiner[T, ParArray[T]]
-#    |                          ^
-#    |                          early definitions are not supported; use trait parameters instead
-
-../scala-scala/src/library/scala/collection/parallel/mutable/ParTrieMap.scala
-# 136 |    it.iterated = this.iterated
-#     |    ^^^^^^^^^^^
-#     |    value `iterated` is not a member of scala.collection.concurrent.TrieMapIterator[K, V](it)
+# assertion failed: data race? overwriting symbol of type ((xs: scala.collection.TraversableOnce[A])scala.collection.mutable.SynchronizedBuffer[A](SynchronizedBuffer.this))(SynchronizedBuffer.this.super$++=), long form = TermRef(ThisType(TypeRef(ThisType(TypeRef(NoPrefix,mutable)),SynchronizedBuffer)),scala$collection$mutable$SynchronizedBuffer$$super$$plus$plus$eq)/withSig(Signature(List(scala.collection.TraversableOnce),scala.collection.mutable.SynchronizedBuffer)) of class class dotty.tools.dotc.core.Types$TermRefWithSignature,
+#    at scala.Predef$.assert(Predef.scala:165)
+#    at dotty.tools.dotc.core.Types$NamedType.checkSymAssign(Types.scala:1490)
+#    at dotty.tools.dotc.core.Types$NamedType.setDenot(Types.scala:1525)
 
 ../scala-scala/src/library/scala/collection/parallel/ParIterableLike.scala
 # assertion failed: found:    => scala.collection.parallel.Combiner[(U, S), That](ParIterableLike.this.BuilderOps[(U, S), That]#asCombiner)
@@ -91,37 +28,46 @@
 #       at dotty.tools.dotc.typer.Typer$$anonfun$typed$2.apply(Typer.scala:1527)
 
 ../scala-scala/src/library/scala/collection/parallel/ParMap.scala
+# assertion failed
+# at scala.Predef$.assert(Predef.scala:151)
+# at dotty.tools.dotc.core.TypeComparer.dotty$tools$dotc$core$TypeComparer$$monitoredIsSubType(TypeComparer.scala:141)
+# at dotty.tools.dotc.core.TypeComparer$$anonfun$isSubType$1.apply$mcZ$sp(TypeComparer.scala:113)
+
 ../scala-scala/src/library/scala/collection/parallel/ParMapLike.scala
+# at scala.Predef$.assert(Predef.scala:151)
+# at dotty.tools.dotc.core.TypeComparer.dotty$tools$dotc$core$TypeComparer$$monitoredIsSubType(TypeComparer.scala:141)
+# at dotty.tools.dotc.core.TypeComparer$$anonfun$isSubType$1.apply$mcZ$sp(TypeComparer.scala:113)
 
 ../scala-scala/src/library/scala/collection/parallel/ParSeqLike.scala
-# 334 |  protected trait Accessor[R, Tp] extends super.Accessor[R, Tp] {
-#     |                                          ^^^^^^^^^^^^^^^^^^^^^
-#     |                                          cyclic inheritance: trait Accessor extends itself
-
-../scala-scala/src/library/scala/collection/parallel/RemainsIterator.scala
-# 617 |  class Zipped[S](ti: SeqSplitter[S]) extends super.Zipped[S](ti) with SeqSplitter[(T, S)] {
-#     |                                              ^^^^^^^^^^^^^^^^^^
-#     |                                              cyclic inheritance: class Zipped extends itself
+# assertion failed: found:    => scala.collection.parallel.Combiner[(U, S), That]((AnyRef & ParSeqLike.this.BuilderOps[(U, S), That])#asCombiner)
+# required: scala.collection.parallel.Combiner[(Any, S), That]
+#  tree = this.builder2ops[(U, S)^, That^](bf.apply(this.repr)).asCombiner, took 21.014 sec
+#    at scala.Predef$.assert(Predef.scala:165)
+#    at dotty.tools.dotc.transform.TreeChecker$Checker.adapt(TreeChecker.scala:452)
+#    at dotty.tools.dotc.typer.Typer$$anonfun$typed$2.apply(Typer.scala:1529)
 
 ../scala-scala/src/library/scala/collection/parallel/Tasks.scala
 # 429 |    fjtask.body.result
 #    |    ^^^^^^^^^^^
 #    |    value `body` is not a member of ForkJoinTasks.this.WrappedTask[R, Tp](fjtask)
 
-../scala-scala/src/library/scala/concurrent/SyncChannel.scala
-# 45 |    writeReq.get
-#    |    ^^^^^^^^^^^^
-#    |    none of the overloaded alternatives of method get in class SyncVar with types
-#    |     (timeout: Long)Option[Boolean]
-#    |     => Boolean
-#    |    match expected type Unit
-
 ../scala-scala/src/library/scala/concurrent/impl/ExecutionContextImpl.scala
 # assertion failed
 
 ../scala-scala/src/library/scala/concurrent/package.scala
-# assertion failed
-
+# assertion failed: found:    scala.concurrent.Awaitable[T]
+#   required: scala.concurrent.Awaitable[T](awaitable)
+# tree = <special-ops>.<dummy-apply>[scala.concurrent.Awaitable[T]](
+#   {
+#     def $anonfun(): scala.concurrent.Awaitable[T] = awaitable.ready(atMost)(scala.concurrent.AwaitPermission)
+#    closure($anonfun)
+#  }
+# ), took 25.209 sec
+#     at scala.Predef$.assert(Predef.scala:165)
+#   at dotty.tools.dotc.transform.TreeChecker$Checker.adapt(TreeChecker.scala:452)
+#   at dotty.tools.dotc.typer.ProtoTypes$FunProto.typedArg(ProtoTypes.scala:236)
+#   at dotty.tools.dotc.typer.Applications$ApplyToUntyped.typedArg(Applications.scala:551)
+#   at dotty.tools.dotc.typer.Applications$ApplyToUntyped.typedArg(Applications.scala:549)
 
 ../scala-scala/src/library/scala/Function1.scala
 # assertion failed: duplicate class Function1#14914; previous was class Function1#14919
@@ -147,22 +93,6 @@
 ../scala-scala/src/library/scala/Function7.scala
 ../scala-scala/src/library/scala/Function8.scala
 ../scala-scala/src/library/scala/Function9.scala
-
-../scala-scala/src/library/scala/io/BufferedSource.scala
-# 38 |  override lazy val iter = (
-#    |                    ^
-#    |                    overriding getter iter in class Source of type => collection.Iterator[Char];
-#    |                     lazy value iter of type collection.Iterator[Char] may not override a non-lazy value
-
-../scala-scala/src/library/scala/io/Source.scala
-# 303 |    report(pos, msg, out)
-#     |                ^^^
-#     |                not found: msg
-
-../scala-scala/src/library/scala/ref/WeakReference.scala
-# 33 |    if (x != null) Some(x) else None
-#    |       ^^^^^^^^^^^
-#    |       Values of types wr.underlying.java$lang$ref$WeakReference$$T and Null cannot be compared with == or !=
 
 ../scala-scala/src/library/scala/reflect/ClassManifestDeprecatedApis.scala
 # 51 |      import Manifest._
@@ -203,10 +133,6 @@
 #     |                                      not found: macro
 
 ../scala-scala/src/library/scala/text/Document.scala
-
-# 19 |case class Tuple1[@specialized(Int, Long, Double) +T1](_1: T1)
-#    |                                                       ^
-#    |                                                       value _1 is already defined as method _1: => T1
 
 ../scala-scala/src/library/scala/util/control/Exception.scala
 # scala.MatchError: PostfixOp(Select(Ident(pf),isDefinedAt),_) (of class dotty.tools.dotc.ast.untpd$PostfixOp)
