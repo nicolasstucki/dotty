@@ -9,7 +9,8 @@ pipeline:
 
 matrix:
   TEST:
-    - test
+    - testOnly dotty.tools.* test.* dotc.tests
+    - testOnly dotc.stdlibTests
     - partest-only-no-bootstrap --show-diff --verbose
     - partest-only --show-diff --verbose
     - partest-stdlib-only-no-bootstrap --show-diff --verbose
