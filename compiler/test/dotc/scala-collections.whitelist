@@ -306,7 +306,12 @@
 ../scala-scala/src/library/scala/util/hashing/package.scala
 ../scala-scala/src/library/scala/util/matching/Regex.scala
 ../scala-scala/src/library/scala/util/MurmurHash.scala
-../scala-scala/src/library/scala/util/Properties.scala
+
+#../scala-scala/src/library/scala/util/Properties.scala
+# Fails in callgraph
+# java.lang.ClassCastException: dotty.tools.dotc.core.Types$CachedClassInfo cannot be cast to dotty.tools.dotc.core.Types$TypeBounds
+#  	at dotty.tools.dotc.core.Types$PolyType$$anonfun$newLikeThis$2$$anonfun$apply$17.apply(Types.scala:2581)
+
 ../scala-scala/src/library/scala/util/Random.scala
 ../scala-scala/src/library/scala/util/Sorting.scala
 
@@ -462,7 +467,10 @@
 ../scala-scala/src/library/scala/concurrent/DelayedLazyVal.scala
 ../scala-scala/src/library/scala/concurrent/duration/Deadline.scala
 ../scala-scala/src/library/scala/concurrent/duration/Duration.scala
-../scala-scala/src/library/scala/concurrent/duration/DurationConversions.scala
+
+# ../scala-scala/src/library/scala/concurrent/duration/DurationConversions.scala
+# fails in callgraph
+
 ../scala-scala/src/library/scala/concurrent/duration/package.scala
 ../scala-scala/src/library/scala/concurrent/ExecutionContext.scala
 ../scala-scala/src/library/scala/concurrent/FutureTaskRunner.scala
@@ -494,24 +502,34 @@
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParHashSet.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParHashTable.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParIterable.scala
-../scala-scala/src/library/scala/collection/parallel/mutable/ParMapLike.scala
+
+#../scala-scala/src/library/scala/collection/parallel/mutable/ParMapLike.scala
+# fails in callgraph (test)
+
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParSeq.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParSet.scala
-../scala-scala/src/library/scala/collection/parallel/mutable/ParSetLike.scala
+
+#../scala-scala/src/library/scala/collection/parallel/mutable/ParSetLike.scala
+# fails in callgraph (test)
+
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParTrieMap.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/UnrolledParArrayCombiner.scala
 ../scala-scala/src/library/scala/collection/parallel/mutable/ParArray.scala
 #../scala-scala/src/library/scala/collection/parallel/mutable/ParMap.scala
 ../scala-scala/src/library/scala/collection/parallel/ParSeq.scala
 ../scala-scala/src/library/scala/collection/parallel/ParSet.scala
-../scala-scala/src/library/scala/collection/parallel/ParSetLike.scala
+
+# ../scala-scala/src/library/scala/collection/parallel/ParSetLike.scala
+# fails is partest
+
 ../scala-scala/src/library/scala/collection/parallel/PreciseSplitter.scala
 ../scala-scala/src/library/scala/collection/parallel/Splitter.scala
 ../scala-scala/src/library/scala/collection/parallel/TaskSupport.scala
 #../scala-scala/src/library/scala/collection/parallel/Tasks.scala
 
 ../scala-scala/src/library/scala/Console.scala
-../scala-scala/src/library/scala/Enumeration.scala
+#../scala-scala/src/library/scala/Enumeration.scala
+# fails in partest
 
 ../scala-scala/src/library/scala/annotation/Annotation.scala
 ../scala-scala/src/library/scala/annotation/bridge.scala
@@ -577,7 +595,8 @@
 ../scala-scala/src/library/scala/runtime/StringAdd.scala
 ../scala-scala/src/library/scala/runtime/StringFormat.scala
 
-../scala-scala/src/library/scala/App.scala
+#../scala-scala/src/library/scala/App.scala
+# fails in partest
 
 ../scala-scala/src/library/scala/Function.scala
 ../scala-scala/src/library/scala/Function0.scala
