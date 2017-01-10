@@ -29,4 +29,9 @@ case class CallInfoWithContext(call: Type, targs: List[Type], argumentsPassed: L
 
   def source: Option[CallInfo] = callee.flatMap(_.source)
 
+  def parents: List[CallInfoWithContext] = parent match {
+    case Some(p) => p :: p.parents
+    case None => Nil
+  }
+
 }

@@ -460,11 +460,13 @@ class CallGraphBuilder(collectedSummaries: Map[Symbol, MethodSummary], mode: Int
       case thisType: ThisType if !calleeSymbol.owner.flags.is(PackageCreationFlags) =>
         val dropUntil = thisType.tref.classSymbol
         var currentThis = caller.call.normalizedPrefix
-        var currentOwner = caller.call.termSymbol.owner
-        while ((currentOwner ne dropUntil) && (currentThis ne NoType)) {
-          if (!currentOwner.is(Method))
-            currentThis = currentThis.normalizedPrefix
-          currentOwner = currentOwner.owner.enclosingClass
+        if (!dropUntil.is(Trait)) {
+          var currentOwner = caller.call.termSymbol.owner
+          while ((currentOwner ne dropUntil) && (currentThis ne NoType)) {
+            if (!currentOwner.is(Method))
+              currentThis = currentThis.normalizedPrefix
+            currentOwner = currentOwner.owner.enclosingClass
+          }
         }
         if (currentThis.derivesFrom(thisType.cls)) {
           if (calleeSymbol.is(Private)) {
@@ -592,10 +594,12 @@ class CallGraphBuilder(collectedSummaries: Map[Symbol, MethodSummary], mode: Int
       }
     }
 
-    // FIXME java method could potentially call this.xyz()
-    // addAllPotentialCallsFor(method.call.normalizedPrefix)
+    def filteredParams(params: List[Type]): List[Type] = {
+      params.distinct.filter(param => !method.parents.exists(_.call.normalizedPrefix == param))
+    }
+
     for {
-      rec <- method.argumentsPassed.distinct
+      rec <- filteredParams(method.call.normalizedPrefix :: method.argumentsPassed)
       potentialCall <- allPotentialCallsFor(rec)
       if method.getOutEdges(potentialCall).isEmpty
     } {
