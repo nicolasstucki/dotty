@@ -649,7 +649,7 @@ class Definitions {
 
   object PhantomsFunctionOf {
     def apply(args: List[Type], resultType: Type)(implicit ctx: Context) =
-      PhantomsFunctionType(args.length).appliedTo(args ::: resultType :: Nil)
+      PhantomsFunctionType(args.map(_.isPhantom)).appliedTo(args ::: resultType :: Nil)
   }
 
   object ArrayOf {
@@ -975,24 +975,22 @@ class Definitions {
     enterCompleteClassSymbol(PhantomPackageClass, tpnme.PhantomNothing, AbstractFinal, List(PhantomAnyType))
   def PhantomNothingType = PhantomNothingClass.typeRef
 
-  private val phantomsFunctionClassesMap: mutable.Map[Int, ClassSymbol] = mutable.Map.empty
-  def PhantomsFunctionClass(arity: Int): ClassSymbol = {
-    assert(0 < arity)
-    if (phantomsFunctionClassesMap.contains(arity)) phantomsFunctionClassesMap(arity)
+  private val phantomsFunctionClassesMap: mutable.Map[List[Boolean], ClassSymbol] = mutable.Map.empty
+  def PhantomsFunctionClass(argsPhantomicity: List[Boolean]): ClassSymbol = {
+    if (phantomsFunctionClassesMap.contains(argsPhantomicity)) phantomsFunctionClassesMap(argsPhantomicity)
     else {
-      val sym = newPhantomsFunctionNTrait(arity)
-      phantomsFunctionClassesMap.put(arity, sym)
+      val sym = newPhantomsFunctionNTrait(argsPhantomicity)
+      phantomsFunctionClassesMap.put(argsPhantomicity, sym)
       sym
     }
   }
 
-  private val phantomsFunctionTypesMap: mutable.Map[Int, TypeRef] = mutable.Map.empty
-  def PhantomsFunctionType(arity: Int): TypeRef = {
-    assert(0 < arity)
-    if (phantomsFunctionTypesMap.contains(arity)) phantomsFunctionTypesMap(arity)
+  private val phantomsFunctionTypesMap: mutable.Map[List[Boolean], TypeRef] = mutable.Map.empty
+  def PhantomsFunctionType(argsPhantomicity: List[Boolean]): TypeRef = {
+    if (phantomsFunctionTypesMap.contains(argsPhantomicity)) phantomsFunctionTypesMap(argsPhantomicity)
     else {
-      val tpe = PhantomsFunctionClass(arity).typeRef
-      phantomsFunctionTypesMap.put(arity, tpe)
+      val tpe = PhantomsFunctionClass(argsPhantomicity).typeRef
+      phantomsFunctionTypesMap.put(argsPhantomicity, tpe)
       tpe
     }
   }
@@ -1000,15 +998,27 @@ class Definitions {
   def isPhantomFunctionClass(sym: Symbol)(implicit ctx: Context): Boolean =
     defn.phantomsFunctionClassesMap.valuesIterator.contains(sym)
 
-  private def newPhantomsFunctionNTrait(i: Int) = {
+  private def newPhantomsFunctionNTrait(argsPhantomicity: List[Boolean]) = {
+    val phantomFunctionArity = argsPhantomicity.length
+    val erasedFunctionArity = argsPhantomicity.count(!_)
+
     val decls = newScope
-    val cls = enterCompleteClassSymbol(PhantomPackageClass, tpnme.PhantomsFunction(i), Trait, List(AnyRefType), decls)
+    val cls = enterCompleteClassSymbol(PhantomPackageClass, tpnme.PhantomsFunction(argsPhantomicity), NoInitsTrait, List(AnyRefType), decls)
     def newTypeParam(name: TypeName, flags: FlagSet, bounds: TypeBounds) =
       newSymbol(cls, name, flags | ClassTypeParamCreationFlags, bounds)
 
-    val vParamNames = (0 until i).map(j => s"p$j".toTermName).toList
-    val tParamSyms = (0 until i).map(j => newTypeParam(s"P$j".toTypeName, Contravariant, TypeBounds.emptyPhantom)).toList
-    val returnTParamSym = newTypeParam("R".toTypeName, Covariant, TypeBounds.empty)
+
+    val vParamNames = (0 until phantomFunctionArity).map(j => s"p$j".toTermName).toList
+    var index1 = 0
+    val tParamSyms = (for (i <- 0 until phantomFunctionArity) yield {
+      if (!argsPhantomicity(i)) {
+        index1 += 1
+        newTypeParam(("scala$Function" + erasedFunctionArity + "$$T" + index1).toTypeName, Contravariant, TypeBounds.empty)
+      } else {
+        newTypeParam(tpnme.phantomFunctionPhantomType(phantomFunctionArity, i), Contravariant, TypeBounds.emptyPhantom)
+      }
+    }).toList
+    val returnTParamSym = newTypeParam(("scala$Function" + erasedFunctionArity + "$$R").toTypeName, Covariant, TypeBounds.empty)
     val applyMethod =
       newMethod(cls, nme.apply, MethodType(vParamNames, tParamSyms.map(_.typeRef), returnTParamSym.typeRef), Deferred)
 

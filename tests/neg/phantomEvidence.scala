@@ -5,7 +5,7 @@ import scala.annotation.implicitNotFound
 /* This is a example of how to implement =:= using erasable phantom types.
  *
  * Run this test with
- *   `run tests/neg/phantomEvidence.scala -Xprint-diff-del -Xprint:arrayConstructors,phantomRefErasure,phantomDeclErasure,erasure`
+ *   `run tests/neg/phantomEvidence.scala -Xprint-diff-del -Xprint:arrayConstructors,phantomParamErasure,phantomDeclErasure,erasure`
  * to see the the diffs after PhantomRefErasure, PhantomDeclErasure and Erasure.
  *
  * See also: ../pos/phantomEvidence.scala

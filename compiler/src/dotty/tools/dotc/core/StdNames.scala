@@ -235,18 +235,30 @@ object StdNames {
 
     private val phantomsFunctionPrefix = "PhantomsFunction"
 
-    def PhantomsFunction(i: Int): N = phantomsFunctionPrefix + i
+    def PhantomsFunction(phantomicity: List[Boolean]): N =
+      phantomsFunctionPrefix + phantomicity.length + "_" + phantomicity.map(if (_) '0' else '1').mkString
 
     def isPhantomsFunction(name: Name): Boolean = {
       val str = name.toString
       if (str.length <= phantomsFunctionPrefix.length || !str.startsWith(phantomsFunctionPrefix)) false
-      else 0 < phantomsFunctionArity(name)
+      else name.toString.contains("_")
     }
 
     def phantomsFunctionArity(name: Name): Int = {
-      val arityString = name.toString.substring(phantomsFunctionPrefix.length)
-      Try(Integer.parseInt(arityString)).getOrElse(-1)
+      Try {
+        val arityString = name.toString.substring(phantomsFunctionPrefix.length, name.toString.indexOf('_'))
+        Integer.parseInt(arityString)
+      }.getOrElse(-1)
     }
+
+    def phantomsFunctionErasedArity(name: Name): Int =
+      name.toString.substring(name.toString.indexOf('_')).toCharArray.count(_ == '1')
+
+    def phantomFunctionPhantomType(arity: Int, index: Int): N =
+      "scala$phantom$PhantomsFunction" + arity + "$$P" + index
+
+    def isPhantomFunctionPhantomType(name: Name): Boolean =
+      name.toString.startsWith("scala$phantom$PhantomsFunction")
 
 // ----- Term names -----------------------------------------
 

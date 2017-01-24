@@ -3,7 +3,7 @@ import dotty.phantom.PhantomAny
 /* This is a example of how to implement =:= using erasable phantom types.
  *
  * Run this test with
- *   `run tests/pos/phantomEvidence.scala -Xprint-diff-del -Xprint:arrayConstructors,phantomRefErasure,phantomDeclErasure,erasure`
+ *   `run tests/pos/phantomEvidence.scala -Xprint-diff-del -Xprint:arrayConstructors,phantomParamErasure,phantomDeclErasure,erasure`
  * to see the the diffs after PhantomRefErasure, PhantomDeclErasure and Erasure.
  *
  * See also: ../neg/phantomEvidence.scala

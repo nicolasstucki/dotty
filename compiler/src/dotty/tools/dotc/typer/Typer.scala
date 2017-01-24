@@ -99,9 +99,17 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
     val name = tree.name
     val noImports = ctx.mode.is(Mode.InPackageClauseName)
 
+    // TODO Convert Function1[PantomAny, Unit] into PhantomsFunction1_0[PhantomAny, Unit] and delete this symbol forcing
     if (nme.isPhantomsFunction(name)) {
       // force phantom function symbol
-      defn.PhantomsFunctionType(nme.phantomsFunctionArity(name))
+      def forceAll(phantomicity: List[Boolean], arityLeft: Int): Unit = {
+        if (arityLeft == 0) defn.PhantomsFunctionType(phantomicity)
+        else {
+          forceAll(true :: phantomicity, arityLeft - 1)
+          forceAll(false :: phantomicity, arityLeft - 1)
+        }
+      }
+      forceAll(Nil, nme.phantomsFunctionArity(name))
     }
 
     /** Method is necessary because error messages need to bind to
@@ -673,8 +681,11 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
     if (ctx.mode is Mode.Type) {
       val funCls =
         if (tree.isInstanceOf[untpd.ImplicitFunction]) defn.ImplicitFunctionClass(args.length)
-        else if (hasPhantomArgs(args)) defn.PhantomsFunctionClass(args.length)
-        else defn.FunctionClass(args.length)
+        else {
+          val argPhantomicity = args.map(arg => typed(arg).tpe.isPhantom)
+          if (argPhantomicity.contains(true)) defn.PhantomsFunctionClass(argPhantomicity)
+          else defn.FunctionClass(args.length)
+        }
       typed(cpy.AppliedTypeTree(tree)(
         untpd.TypeTree(funCls.typeRef), args :+ body), pt)
     }
@@ -2152,17 +2163,6 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
   private def checkNotPhantomExpr(msg: => String, expr: Tree)(implicit ctx: Context): Unit = {
     if (expr.tpe.derivesFrom(defn.PhantomAnyClass))
       ctx.error(msg, expr.pos)
-  }
-
-  private def hasPhantomArgs(args: List[untpd.Tree])(implicit ctx: Context): Boolean = {
-    val numPhantomArgs = args.count(typed(_).tpe.derivesFrom(defn.PhantomAnyClass))
-    val argsLength = args.length
-    val res = numPhantomArgs != 0
-    if (res && numPhantomArgs != argsLength) {
-      ctx.error("Function type inputs cannot have both phantom and non phantom parameters. Consider currying the parameters.",
-          args.head.pos)
-    }
-    res
   }
 
 }

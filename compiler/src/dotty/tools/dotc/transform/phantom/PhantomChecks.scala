@@ -127,9 +127,24 @@ class PhantomChecks extends MiniPhaseTransform {
     tree
   }
 
+  override def transformClosure(tree: Closure)(implicit ctx: Context, info: TransformerInfo): Tree = {
+    tree.tpe match {
+      case tp: RefinedType if tp.refinedInfo.isPhantom && isPhantomFunctionType(tp) =>
+        ctx.error(s"Closures can not return a phantom value.", tree.pos) // TODO
+      case _ =>
+    }
+    tree
+  }
+
   private def inPhantomClass(sym: Symbol)(implicit ctx: Context): Boolean = sym.owner match {
     case cls: ClassSymbol => cls.classSymbol.derivesFrom(defn.PhantomAnyClass)
     case _                => false
+  }
+
+  //TODO duplicated in PhantomFunctionErasure
+  @tailrec private def isPhantomFunctionType(tpe: Type)(implicit ctx: Context): Boolean = tpe match {
+    case tpe: RefinedType => isPhantomFunctionType(tpe.parent)
+    case _                => defn.isPhantomFunctionClass(tpe.classSymbol)
   }
 
 }

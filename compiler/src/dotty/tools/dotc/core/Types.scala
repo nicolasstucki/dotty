@@ -1246,8 +1246,6 @@ object Types {
         val formals1 = if (dropLast == 0) formals else formals dropRight dropLast
         val phantomCount = formals1.count(_.derivesFrom(defn.PhantomAnyClass))
         if (phantomCount != 0) {
-          if (formals1.length != phantomCount)
-            ctx.error("Function type inputs cannot have both phantom and non phantom parameters. Consider currying the parameters.", ctx.owner.pos)
           defn.PhantomsFunctionOf(formals1, mt.resultType)
         } else {
           defn.FunctionOf(

@@ -14,24 +14,24 @@ import dotty.tools.dotc.transform.TreeTransforms.{MiniPhaseTransform, Transforme
 
 import scala.annotation.tailrec
 
-class PhantomRefErasure extends MiniPhaseTransform with InfoTransformer {
+class PhantomParamErasure extends MiniPhaseTransform with InfoTransformer {
   import tpd._
   import Phantoms._
 
-  override def phaseName: String = "phantomRefErasure"
+  override def phaseName: String = "phantomParamErasure"
 
   /** List of names of phases that should precede this phase */
   override def runsAfter: Set[Class[_ <: Phase]] =
-    Set(classOf[InterceptedMethods], classOf[Splitter], classOf[ElimRepeated])
+    Set(classOf[PhantomChecks])
 
   /** Check what the phase achieves, to be called at any point after it is finished. */
   override def checkPostCondition(tree: Tree)(implicit ctx: Context): Unit = {
     def assertNotPhantom(tree: Tree): Unit =
       assert(!tree.tpe.isPhantom, "All phantom type values should be erased in " + tree)
     tree match {
-      case _: TypeTree         =>
-      case _: Trees.TypeDef[_] =>
-      case Block(stats, _)     => stats.foreach(assertNotPhantom)
+      case _: TypeTree =>
+      case _: TypeDef =>
+      case Block(stats, _) => stats.foreach(checkPostCondition)
 
       case DefDef(_, _, vparamss, tpt, _) if !returnsPhantom(tpt.tpe) =>
         vparamss.foreach(_.foreach(assertNotPhantom))
@@ -74,10 +74,12 @@ class PhantomRefErasure extends MiniPhaseTransform with InfoTransformer {
       }
     } else {
       val synthVals = tree.args.map { arg =>
-        SyntheticValDef(ctx.freshName("phantomLift$").toTermName, arg)
+        if (arg.tpe.isPhantom) arg
+        else SyntheticValDef(ctx.freshName("phantomLift$").toTermName, arg)
       }
-      val synthValRefs = synthVals.map(synthVal => Ident(synthVal.symbol.termRef))
-      val newArgs = synthValRefs.filter(synthValRef => !synthValRef.tpe.isPhantom)
+      val newArgs = synthVals.collect {
+        case synthVal if !synthVal.tpe.isPhantom => Ident(synthVal.symbol.termRef)
+      }
       val args = transformStats(synthVals)
       tree.fun match {
         case Block(stats, fun) =>

@@ -340,7 +340,7 @@ object Phases {
         assert(myPeriod == Periods.InvalidPeriod, s"phase $this has already been used once; cannot be reused")
       myBase = base
       myPeriod = Period(NoRunId, start, end)
-      myErasedRefPhantoms = prev.getClass == classOf[PhantomRefErasure] || prev.erasedRefPhantoms
+      myErasedRefPhantoms = prev.getClass == classOf[PhantomParamErasure] || prev.erasedRefPhantoms
       myErasedTypes  = prev.getClass == classOf[Erasure]      || prev.erasedTypes
       myFlatClasses  = prev.getClass == classOf[Flatten]      || prev.flatClasses
       myRefChecked   = prev.getClass == classOf[RefChecks]    || prev.refChecked
