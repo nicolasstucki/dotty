@@ -10,9 +10,9 @@ object Test {
   }
 
   def foo1: Pinky => Unit = new Blinky1
-  def foo2(boo: PhantomsFunction1_0[Pinky, Unit]) = boo(new Pinky)
+  def foo2(boo: Function1[Pinky, Unit]) = boo(new Pinky)
 }
 
-class Blinky1 extends PhantomsFunction1_0[Pinky, Unit] {
+class Blinky1 extends Function1[Pinky, Unit] {
   def apply(p1: Pinky) = println("Blinky1.apply()")
 }

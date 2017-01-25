@@ -10,6 +10,6 @@ object Test {
   val bar1: (Pinky, Pinky) => Unit = new Blinky2
 }
 
-class Blinky2 extends PhantomsFunction2_00[Pinky, Pinky, Unit] {
+class Blinky2 extends Function2[Pinky, Pinky, Unit] {
   def apply(p1: Pinky, p2: Pinky) = println("Blinky2.apply()")
 }

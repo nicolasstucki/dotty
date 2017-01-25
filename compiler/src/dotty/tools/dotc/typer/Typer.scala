@@ -99,19 +99,6 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
     val name = tree.name
     val noImports = ctx.mode.is(Mode.InPackageClauseName)
 
-    // TODO Convert Function1[PantomAny, Unit] into PhantomsFunction1_0[PhantomAny, Unit] and delete this symbol forcing
-    if (nme.isPhantomsFunction(name)) {
-      // force phantom function symbol
-      def forceAll(phantomicity: List[Boolean], arityLeft: Int): Unit = {
-        if (arityLeft == 0) defn.PhantomsFunctionType(phantomicity)
-        else {
-          forceAll(true :: phantomicity, arityLeft - 1)
-          forceAll(false :: phantomicity, arityLeft - 1)
-        }
-      }
-      forceAll(Nil, nme.phantomsFunctionArity(name))
-    }
-
     /** Method is necessary because error messages need to bind to
      *  to typedIdent's context which is lost in nested calls to findRef
      */
@@ -1094,8 +1081,9 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
           }
           args.zipWithConserve(tparams)(typedArg(_, _)).asInstanceOf[List[Tree]]
         }
+      val tpt2 = adaptIfPhantomsFunction(tpt1, args1)
       // check that arguments conform to bounds is done in phase PostTyper
-      assignType(cpy.AppliedTypeTree(tree)(tpt1, args1), tpt1, args1)
+      assignType(cpy.AppliedTypeTree(tree)(tpt2, args1), tpt2, args1)
     }
   }
 
@@ -2163,6 +2151,17 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
   private def checkNotPhantomExpr(msg: => String, expr: Tree)(implicit ctx: Context): Unit = {
     if (expr.tpe.derivesFrom(defn.PhantomAnyClass))
       ctx.error(msg, expr.pos)
+  }
+
+  private def adaptIfPhantomsFunction(tpt: tpd.Tree, args: List[tpd.Tree])(implicit ctx: Context): tpd.Tree = {
+    lazy val phantomicity = args.init.map(_.tpe.isPhantom)
+    if (!defn.isFunctionClass(tpt.tpe.typeSymbol) || !phantomicity.contains(true)) {
+      tpt
+    } else {
+      val phantomFunction = Ident(defn.PhantomsFunctionType(phantomicity))
+      phantomFunction.setPosUnchecked(tpt.pos)
+      typed(phantomFunction, AnyTypeConstructorProto)(ctx.retractMode(Mode.Pattern))
+    }
   }
 
 }
