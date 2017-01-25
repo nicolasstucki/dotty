@@ -48,7 +48,6 @@ class PhantomDeclErasure extends MiniPhaseTransform with InfoTransformer {
     trees.flatMap {
       case ValDef(_, tpt, block: Block) if tpt.tpe.isPhantom => block.stats
       case stat: ValOrDefDef if stat.tpt.tpe.isPhantom       => Nil
-      case stat: TypeDef if stat.tpe.isPhantom               => Nil
       case stat                                              => List(stat)
     }
   }

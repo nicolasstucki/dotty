@@ -59,9 +59,10 @@ class Compiler {
            new LiftTry,             // Put try expressions that might execute on non-empty stacks into their own methods
            new ClassOf),            // Expand `Predef.classOf` calls.
       List(new PhantomParamErasure, // Rewrite trees erasing all value references of phantom types.
-           new PhantomFunctions, // Erase PhantomsFunctionN to Function0
-           new ExpandSAMs),          // Expand single abstract method closures to anonymous classes
-      List(new PhantomDeclErasure, // Rewrite trees erasing all phantom types declarations.
+           new PhantomFunctions,    // Erase PhantomsFunctionN to Function0
+           new ExpandSAMs),         // Expand single abstract method closures to anonymous classes
+      List(new PhantomDeclErasure,  // Erases defdefs and valdefs that return a phantom type
+           new PhantomTypeErasure,  // Erases phantom types
            new TryCatchPatterns,    // Compile cases in try/catch
            new PatternMatcher,      // Compile pattern matches
            new ExplicitOuter,       // Add accessors to outer classes from nested ones.
