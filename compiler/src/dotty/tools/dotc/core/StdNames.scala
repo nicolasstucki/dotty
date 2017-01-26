@@ -251,10 +251,19 @@ object StdNames {
       }.getOrElse(-1)
     }
 
+    def phantomsFunctionPhantomicity(name: Name): List[Boolean] = {
+      if (!isPhantomsFunction(name)) immutable.Nil
+      else {
+        val phantomicityString = name.toString.substring(name.toString.indexOf('_') + 1).toCharArray
+        if (phantomicityString.exists(c => c != '0' && c != '1')) immutable.Nil
+        else phantomicityString.map(_ == '0').toList
+      }
+    }
+
     def phantomsFunctionErasedArity(name: Name): Int =
       name.toString.substring(name.toString.indexOf('_')).toCharArray.count(_ == '1')
 
-    def phantomFunctionPhantomType(arity: Int, index: Int): N =
+    def phantomFunctionPhantomTypeParam(arity: Int, index: Int): N =
       "scala$phantom$PhantomsFunction" + arity + "$$P" + index
 
     def isPhantomFunctionPhantomType(name: Name): Boolean =

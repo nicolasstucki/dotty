@@ -60,14 +60,14 @@ class Definitions {
   private def enterCompleteClassSymbol(owner: Symbol, name: TypeName, flags: FlagSet, parents: List[TypeRef], decls: Scope = newScope) =
     ctx.newCompleteClassSymbol(owner, name, flags | Permanent, parents, decls).entered
 
-  private def enterTypeField(cls: ClassSymbol, name: TypeName, flags: FlagSet, scope: MutableScope) =
-    scope.enter(newSymbol(cls, name, flags, TypeBounds.empty))
+  private def enterTypeField(cls: ClassSymbol, name: TypeName, flags: FlagSet, scope: MutableScope, typeBounds: TypeBounds) =
+    scope.enter(newSymbol(cls, name, flags, typeBounds))
 
-  private def enterTypeParam(cls: ClassSymbol, name: TypeName, flags: FlagSet, scope: MutableScope) =
-    enterTypeField(cls, name, flags | ClassTypeParamCreationFlags, scope)
+  private def enterTypeParam(cls: ClassSymbol, name: TypeName, flags: FlagSet, scope: MutableScope, typeBounds: TypeBounds) =
+    enterTypeField(cls, name, flags | ClassTypeParamCreationFlags, scope, typeBounds)
 
   private def enterSyntheticTypeParam(cls: ClassSymbol, paramFlags: FlagSet, scope: MutableScope, suffix: String = "T0") =
-    enterTypeParam(cls, suffix.toTypeName.expandedName(cls), ExpandedName | paramFlags, scope)
+    enterTypeParam(cls, suffix.toTypeName.expandedName(cls), ExpandedName | paramFlags, scope, TypeBounds.empty)
 
   // NOTE: Ideally we would write `parentConstrs: => Type*` but SIP-24 is only
   // implemented in Dotty and not in Scala 2.
@@ -116,8 +116,8 @@ class Definitions {
         val arity = name.functionArity
         val argParams =
           for (i <- List.range(0, arity)) yield
-            enterTypeParam(cls, name ++ "$T" ++ i.toString, Contravariant, decls)
-        val resParam = enterTypeParam(cls, name ++ "$R", Covariant, decls)
+            enterTypeParam(cls, name ++ "$T" ++ i.toString, Contravariant, decls, TypeBounds.empty)
+        val resParam = enterTypeParam(cls, name ++ "$R", Covariant, decls, TypeBounds.empty)
         val (methodType, parentTraits) =
           if (name.startsWith(tpnme.ImplicitFunction)) {
             val superTrait =
@@ -918,6 +918,25 @@ class Definitions {
     ScalaPackageClass.info = oldInfo.derivedClassInfo(decls = newDecls)
   }
 
+  /** Give the scala package a scope where a PhantomsFunctionN trait is automatically
+    *  added when someone looks for it.
+    */
+  private def makeScalaSpecialPhantom()(implicit ctx: Context) = {
+    val oldInfo = PhantomPackageClass.classInfo
+    val oldDecls = oldInfo.decls
+    val newDecls = new MutableScope(oldDecls) {
+      override def lookupEntry(name: Name)(implicit ctx: Context): ScopeEntry = {
+        val res = super.lookupEntry(name)
+        lazy val phantomicity = nme.phantomsFunctionPhantomicity(name)
+        if (res == null && name.isTypeName && phantomicity.nonEmpty) {
+          newScopeEntry(newPhantomsFunctionNTrait(phantomicity))
+        }
+        else res
+      }
+    }
+    PhantomPackageClass.info = oldInfo.derivedClassInfo(decls = newDecls)
+  }
+
   /** Lists core classes that don't have underlying bytecode, but are synthesized on-the-fly in every reflection universe */
   private lazy val syntheticScalaClasses = List(
     AnyClass,
@@ -950,6 +969,7 @@ class Definitions {
     this.ctx = ctx
     if (!_isInitialized) {
       makeScalaSpecial()
+      makeScalaSpecialPhantom()
 
       // force initialization of every symbol that is synthesized or hijacked by the compiler
       val forced = syntheticCoreClasses ++ syntheticCoreMethods ++ ScalaValueClasses()
@@ -975,56 +995,53 @@ class Definitions {
     enterCompleteClassSymbol(PhantomPackageClass, tpnme.PhantomNothing, AbstractFinal, List(PhantomAnyType))
   def PhantomNothingType = PhantomNothingClass.typeRef
 
-  private val phantomsFunctionClassesMap: mutable.Map[List[Boolean], ClassSymbol] = mutable.Map.empty
-  def PhantomsFunctionClass(argsPhantomicity: List[Boolean]): ClassSymbol = {
-    if (phantomsFunctionClassesMap.contains(argsPhantomicity)) phantomsFunctionClassesMap(argsPhantomicity)
-    else {
-      val sym = newPhantomsFunctionNTrait(argsPhantomicity)
-      phantomsFunctionClassesMap.put(argsPhantomicity, sym)
-      sym
-    }
-  }
+  def PhantomsFunctionClass(phantomicity: List[Boolean]): ClassSymbol =
+    ctx.requiredClass("dotty.phantom." + tpnme.PhantomsFunction(phantomicity))
 
-  private val phantomsFunctionTypesMap: mutable.Map[List[Boolean], TypeRef] = mutable.Map.empty
-  def PhantomsFunctionType(argsPhantomicity: List[Boolean]): TypeRef = {
-    if (phantomsFunctionTypesMap.contains(argsPhantomicity)) phantomsFunctionTypesMap(argsPhantomicity)
-    else {
-      val tpe = PhantomsFunctionClass(argsPhantomicity).typeRef
-      phantomsFunctionTypesMap.put(argsPhantomicity, tpe)
-      tpe
-    }
-  }
+  def PhantomsFunctionType(phantomicity: List[Boolean]): TypeRef =
+    PhantomsFunctionClass(phantomicity).typeRef
 
   def isPhantomFunctionClass(sym: Symbol)(implicit ctx: Context): Boolean =
-    defn.phantomsFunctionClassesMap.valuesIterator.contains(sym)
+    sym.exists && sym.owner == PhantomPackageClass && nme.isPhantomsFunction(sym.name)
 
-  private def newPhantomsFunctionNTrait(argsPhantomicity: List[Boolean]) = {
-    val phantomFunctionArity = argsPhantomicity.length
-    val erasedFunctionArity = argsPhantomicity.count(!_)
+  private def newPhantomsFunctionNTrait(phantomicity: List[Boolean]) = {
+    val completer = new LazyType {
+      def complete(denot: SymDenotation)(implicit ctx: Context): Unit = {
+        val cls = denot.asClass.classSymbol
+        val decls = newScope
+        val phantomFunctionArity = phantomicity.length
+        val erasedFunctionArity = phantomicity.count(!_)
 
-    val decls = newScope
-    val cls = enterCompleteClassSymbol(PhantomPackageClass, tpnme.PhantomsFunction(argsPhantomicity), NoInitsTrait, List(AnyRefType), decls)
-    def newTypeParam(name: TypeName, flags: FlagSet, bounds: TypeBounds) =
-      newSymbol(cls, name, flags | ClassTypeParamCreationFlags, bounds)
+        var index1 = 0
+        def nextIndex = { index1 += 1; index1 }
+        val argParams =
+          for ((isPhantom, i) <- phantomicity.zipWithIndex) yield {
+            val name =
+              if (isPhantom) tpnme.phantomFunctionPhantomTypeParam(phantomFunctionArity, i)
+              else ("scala$Function" + erasedFunctionArity + "$$T" + nextIndex).toTypeName
+            val bounds = if (isPhantom) TypeBounds.emptyPhantom else TypeBounds.empty
+            enterTypeParam(cls, name, Contravariant, decls, bounds)
+        }
 
+        val resParam =
+          enterTypeParam(cls, ("scala$Function" + erasedFunctionArity + "$$R").toTypeName, Covariant, decls, TypeBounds.empty)
 
-    val vParamNames = (0 until phantomFunctionArity).map(j => s"p$j".toTermName).toList
-    var index1 = 0
-    val tParamSyms = (for (i <- 0 until phantomFunctionArity) yield {
-      if (!argsPhantomicity(i)) {
-        index1 += 1
-        newTypeParam(("scala$Function" + erasedFunctionArity + "$$T" + index1).toTypeName, Contravariant, TypeBounds.empty)
-      } else {
-        newTypeParam(tpnme.phantomFunctionPhantomType(phantomFunctionArity, i), Contravariant, TypeBounds.emptyPhantom)
+        val (methodType, parentTraits) = /*
+          if (name.startsWith(tpnme.ImplicitFunction)) {
+            val superTrait =
+              FunctionType(arity).appliedTo(argParams.map(_.typeRef) ::: resParam.typeRef :: Nil)
+            (ImplicitMethodType, ctx.normalizeToClassRefs(superTrait :: Nil, cls, decls))
+          }
+          else */ (MethodType, Nil)
+        val applyMeth =
+          decls.enter(
+            newMethod(cls, nme.apply,
+              methodType(argParams.map(_.typeRef), resParam.typeRef), Deferred))
+        denot.info =
+          ClassInfo(PhantomPackageClass.thisType, cls, ObjectType :: parentTraits, decls)
       }
-    }).toList
-    val returnTParamSym = newTypeParam(("scala$Function" + erasedFunctionArity + "$$R").toTypeName, Covariant, TypeBounds.empty)
-    val applyMethod =
-      newMethod(cls, nme.apply, MethodType(vParamNames, tParamSyms.map(_.typeRef), returnTParamSym.typeRef), Deferred)
-
-    tParamSyms.foreach(decls.enter)
-    decls.enter(returnTParamSym)
-    decls.enter(applyMethod)
-    completeClass(cls)
+    }
+    newClassSymbol(PhantomPackageClass, tpnme.PhantomsFunction(phantomicity), NoInitsTrait, completer)
   }
+
 }
