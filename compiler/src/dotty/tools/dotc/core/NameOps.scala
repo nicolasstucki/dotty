@@ -9,6 +9,8 @@ import Decorators.StringDecorator
 import util.{Chars, NameTransformer}
 import Chars.isOperatorPart
 
+import scala.collection.immutable
+
 object NameOps {
 
   final object compactify {
@@ -234,10 +236,46 @@ object NameOps {
     def functionArity: Int = {
       def test(prefix: Name): Int =
         if (name.startsWith(prefix))
-          try name.drop(prefix.length).toString.toInt
+          try name.drop(prefix.length).takeWhile(_ != '_').toString.toInt
           catch { case ex: NumberFormatException => -1 }
         else -1
-      test(tpnme.Function) max test(tpnme.ImplicitFunction)
+      test(tpnme.Function) max test(tpnme.FunctionWithPhantoms) max
+        test(tpnme.ImplicitFunction) max test(tpnme.ImplicitFunctionWithPhantoms)
+    }
+
+    def functionWithPhantomsErasedArity: Int = {
+      val arity = functionArity
+      if (arity == -1) {
+        -1
+      } else if (name.startsWith(tpnme.FunctionWithPhantoms) || name.startsWith(tpnme.ImplicitFunctionWithPhantoms)) {
+        val phantomicityStr = name.toString.substring(name.toString.indexOf('_') + 1).toCharArray
+        assert(phantomicityStr.length == arity, name + " " + phantomicityStr.mkString + " " + arity)
+        phantomicityStr.count(_ == '1')
+      } else {
+        arity
+      }
+    }
+
+    def functionWithPhantomsErasedName: TypeName = {
+      val arity = functionWithPhantomsErasedArity.toString
+      if (isFunctionWithPhantoms) tpnme.Function ++ arity
+      else if (isImplicitFunctionWithPhantoms) tpnme.ImplicitFunction ++ arity
+      else tpnme.NO_NAME
+    }
+
+    def isFunctionWithPhantoms: Boolean =
+      name.toString.startsWith(FunctionWithPhantoms.toString) && name.toString.contains("_")
+
+    def isImplicitFunctionWithPhantoms: Boolean =
+      name.toString.startsWith(ImplicitFunctionWithPhantoms.toString) && name.toString.contains("_")
+
+    def functionWithPhantomsPhantomicity: List[Boolean] = {
+      if (!isFunctionWithPhantoms && isImplicitFunctionWithPhantoms) immutable.Nil
+      else {
+        val phantomicityString = name.toString.substring(name.toString.indexOf('_') + 1).toCharArray
+        if (phantomicityString.exists(c => c != '0' && c != '1')) immutable.Nil
+        else phantomicityString.map(_ == '0').toList
+      }
     }
 
     /** The name of the generic runtime operation corresponding to an array operation */

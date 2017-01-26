@@ -5,6 +5,8 @@ import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.Decorators._
 import dotty.tools.dotc.core.DenotTransformers._
 import dotty.tools.dotc.core.Denotations.SingleDenotation
+import dotty.tools.dotc.core.Names._
+import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.Phases._
 import dotty.tools.dotc.core.StdNames._
 import dotty.tools.dotc.core.SymDenotations.ClassDenotation
@@ -73,7 +75,9 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
           case parent => parent
         }
 
-        val newDecls = tp.decls.filteredScope(decl => !nme.isPhantomFunctionPhantomType(decl.name))
+        val newDecls = tp.decls.filteredScope { decl =>
+          !decl.isType || !isFunctionWithPhantomsTypeParam(decl.name)
+        }
 
         ClassInfo(tp.prefix, tp.cls, newParents, newDecls, tp.selfInfo)
 
@@ -113,9 +117,9 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
   private def erasedPhantomFunctionClass(tpe: RefinedType)(implicit ctx: Context): Type = {
     def replaceFunctionClassAndParamTypes(tp: Type): Type = tp match {
       case RefinedType(parent, refinedName, refinedInfo) =>
-        if (nme.isPhantomFunctionPhantomType(refinedName)) replaceFunctionClassAndParamTypes(parent)
+        if (isFunctionWithPhantomsTypeParam(refinedName)) replaceFunctionClassAndParamTypes(parent)
         else RefinedType(replaceFunctionClassAndParamTypes(parent), refinedName, refinedInfo)
-      case tp: TypeRef => defn.FunctionType(nme.phantomsFunctionErasedArity(tp.name))
+      case tp: TypeRef => defn.FunctionType(tp.name.asTypeName.functionWithPhantomsErasedArity)
     }
 
     replaceFunctionClassAndParamTypes(tpe)
@@ -124,4 +128,8 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
   private def countNonPhantomParametersOfParent(cls: ClassSymbol, parent: Type)(implicit ctx: Context): Int =
     parent.typeParams.count(!_.paramRef.typeSymbol.overriddenSymbol(cls).paramBounds.isPhantom)
 
+  private def isFunctionWithPhantomsTypeParam(name: Name): Boolean = {
+    def test(name2: Name): Boolean = name.startsWith(tpnme.scala_ ++ "$" ++ name2)
+    test(tpnme.FunctionWithPhantoms) || test(tpnme.ImplicitFunctionWithPhantoms)
+  }
 }

@@ -89,6 +89,7 @@ class Definitions {
     newClassSymbol(ScalaPackageClass, name, EmptyFlags, completer).entered
   }
 
+  // TODO doc for FunctionNWithPhantoms and ImplicitFunctionNWithPhantoms
   /** The trait FunctionN or ImplicitFunctionN, for some N
    *  @param  name   The name of the trait to be created
    *
@@ -109,28 +110,57 @@ class Definitions {
    *      }
    */
   private def newFunctionNTrait(name: TypeName) = {
-    val completer = new LazyType {
+    abstract class LazyFunctionType(name: TypeName) extends LazyType {
+      protected def arity: Int
+      protected def paramTypeName(i: Int): TypeName
+      protected def paramTypeBound(i: Int): TypeBounds
+      protected def superTraitIfImplicit: TypeRef
       def complete(denot: SymDenotation)(implicit ctx: Context): Unit = {
         val cls = denot.asClass.classSymbol
         val decls = newScope
-        val arity = name.functionArity
-        val argParams =
-          for (i <- List.range(0, arity)) yield
-            enterTypeParam(cls, name ++ "$T" ++ i.toString, Contravariant, decls, TypeBounds.empty)
-        val resParam = enterTypeParam(cls, name ++ "$R", Covariant, decls, TypeBounds.empty)
+        val tParamTpes = List.tabulate(arity + 1){ i =>
+          enterTypeParam(cls, paramTypeName(i), paramTypeVariance(i), decls, paramTypeBound(i)).typeRef
+        }
         val (methodType, parentTraits) =
           if (name.startsWith(tpnme.ImplicitFunction)) {
-            val superTrait =
-              FunctionType(arity).appliedTo(argParams.map(_.typeRef) ::: resParam.typeRef :: Nil)
+            val superTrait = superTraitIfImplicit.appliedTo(tParamTpes)
             (ImplicitMethodType, ctx.normalizeToClassRefs(superTrait :: Nil, cls, decls))
           }
           else (MethodType, Nil)
         val applyMeth =
-          decls.enter(
-            newMethod(cls, nme.apply,
-              methodType(argParams.map(_.typeRef), resParam.typeRef), Deferred))
-        denot.info =
-          ClassInfo(ScalaPackageClass.thisType, cls, ObjectType :: parentTraits, decls)
+          decls.enter(newMethod(cls, nme.apply, methodType(tParamTpes.init, tParamTpes.last), Deferred))
+        denot.info = ClassInfo(ScalaPackageClass.thisType, cls, ObjectType :: parentTraits, decls)
+      }
+      private final def paramTypeVariance(i: Int): FlagSet = if (i < arity) Contravariant else Covariant
+    }
+
+    val completer = {
+      if (name.isFunctionWithPhantoms || name.isImplicitFunctionWithPhantoms) {
+        new LazyFunctionType(name) {
+          private val phantomicity = name.functionWithPhantomsPhantomicity
+          private val erasedFunctionArity = phantomicity.count(!_)
+          private val erasedName = name.functionWithPhantomsErasedName
+          protected def arity: Int = phantomicity.length
+          protected def erasedParamNum(i: Int): Int = phantomicity.iterator.take(i).count(!_) + 1
+          protected def paramTypeName(i: Int): TypeName = {
+            if (i == arity) tpnme.scala_ ++ "$" ++ erasedName ++ "$$R"
+            else if (phantomicity(i)) tpnme.scala_ ++  "$" ++ name ++ "$$P" ++ i.toString
+            else tpnme.scala_ ++ "$" ++ erasedName ++ "$$T" ++ erasedParamNum(i).toString
+          }
+          protected def paramTypeBound(i: Int): TypeBounds =
+            if (i != phantomicity.length && phantomicity(i)) TypeBounds.emptyPhantom else TypeBounds.empty
+          protected def superTraitIfImplicit: TypeRef = PhantomsFunctionType(phantomicity, false)
+        }
+      } else {
+        new LazyFunctionType(name) {
+          protected val arity: Int = name.functionArity
+          protected def paramTypeName(i: Int): TypeName = {
+            val paramName = if (i != arity) "T" + i else "R"
+            tpnme.scala_ ++ "$" ++ name ++ paramName ++ "$$" ++ paramName
+          }
+          protected def paramTypeBound(i: Int): TypeBounds = TypeBounds.empty
+          protected def superTraitIfImplicit: TypeRef = FunctionType(arity)
+        }
       }
     }
     newClassSymbol(ScalaPackageClass, name, Trait | NoInits, completer)
@@ -631,8 +661,13 @@ class Definitions {
     sym.owner.linkedClass.typeRef
 
   object FunctionOf {
-    def apply(args: List[Type], resultType: Type, isImplicit: Boolean = false)(implicit ctx: Context) =
-      FunctionType(args.length, isImplicit).appliedTo(args ::: resultType :: Nil)
+    def apply(args: List[Type], resultType: Type, isImplicit: Boolean = false)(implicit ctx: Context) = {
+      val phantomicity = args.map(_.isPhantom)
+      val function =
+        if (phantomicity.contains(true)) PhantomsFunctionType(phantomicity, isImplicit)
+        else FunctionType(args.length, isImplicit)
+      function.appliedTo(args ::: resultType :: Nil)
+    }
     def unapply(ft: Type)(implicit ctx: Context) = {
       val tsym = ft.typeSymbol
       val isImplicitFun = isImplicitFunctionClass(tsym)
@@ -645,11 +680,6 @@ class Definitions {
       }
       else None
     }
-  }
-
-  object PhantomsFunctionOf {
-    def apply(args: List[Type], resultType: Type)(implicit ctx: Context) =
-      PhantomsFunctionType(args.map(_.isPhantom)).appliedTo(args ::: resultType :: Nil)
   }
 
   object ArrayOf {
@@ -714,6 +744,15 @@ class Definitions {
     else if (n < MaxImplementedFunctionArity) ImplementedFunctionType(n)
     else FunctionClass(n).typeRef
 
+  def PhantomsFunctionClass(phantomicity: List[Boolean], isImplicit: Boolean): ClassSymbol = {
+    val prefix = if (isImplicit) tpnme.ImplicitFunctionWithPhantoms else tpnme.FunctionWithPhantoms
+    val classPath = "scala." + prefix + phantomicity.length + "_" + phantomicity.map(if (_) '0' else '1').mkString
+    ctx.requiredClass(classPath)
+  }
+
+  def PhantomsFunctionType(phantomicity: List[Boolean], isImplicit: Boolean): TypeRef =
+    PhantomsFunctionClass(phantomicity, isImplicit).typeRef
+
   private lazy val TupleTypes: Set[TypeRef] = TupleType.toSet
   private lazy val ProductTypes: Set[TypeRef] = ProductNType.toSet
 
@@ -738,6 +777,10 @@ class Definitions {
 
   def isFunctionClass(cls: Symbol) = isVarArityClass(cls, tpnme.Function)
   def isImplicitFunctionClass(cls: Symbol) = isVarArityClass(cls, tpnme.ImplicitFunction)
+  def isPhantomFunctionClass(sym: Symbol)(implicit ctx: Context): Boolean =
+    sym.exists && sym.owner == ScalaPackageClass && sym.name.isFunctionWithPhantoms
+  def isImplicitPhantomFunctionClass(sym: Symbol)(implicit ctx: Context): Boolean =
+    sym.exists && sym.owner == ScalaPackageClass && sym.name.isImplicitFunctionWithPhantoms
   def isUnimplementedFunctionClass(cls: Symbol) =
     isFunctionClass(cls) && cls.name.functionArity > MaxImplementedFunctionArity
   def isAbstractFunctionClass(cls: Symbol) = isVarArityClass(cls, tpnme.AbstractFunction)
@@ -910,31 +953,12 @@ class Definitions {
     val newDecls = new MutableScope(oldDecls) {
       override def lookupEntry(name: Name)(implicit ctx: Context): ScopeEntry = {
         val res = super.lookupEntry(name)
-        if (res == null && name.isTypeName && name.functionArity > maxImplemented(name))
+        if (res == null && name.isTypeName && (name.functionArity > maxImplemented(name) || (name.isFunctionWithPhantoms && name.functionArity > 0)))
           newScopeEntry(newFunctionNTrait(name.asTypeName))
         else res
       }
     }
     ScalaPackageClass.info = oldInfo.derivedClassInfo(decls = newDecls)
-  }
-
-  /** Give the scala package a scope where a PhantomsFunctionN trait is automatically
-    *  added when someone looks for it.
-    */
-  private def makeScalaSpecialPhantom()(implicit ctx: Context) = {
-    val oldInfo = PhantomPackageClass.classInfo
-    val oldDecls = oldInfo.decls
-    val newDecls = new MutableScope(oldDecls) {
-      override def lookupEntry(name: Name)(implicit ctx: Context): ScopeEntry = {
-        val res = super.lookupEntry(name)
-        lazy val phantomicity = nme.phantomsFunctionPhantomicity(name)
-        if (res == null && name.isTypeName && phantomicity.nonEmpty) {
-          newScopeEntry(newPhantomsFunctionNTrait(phantomicity))
-        }
-        else res
-      }
-    }
-    PhantomPackageClass.info = oldInfo.derivedClassInfo(decls = newDecls)
   }
 
   /** Lists core classes that don't have underlying bytecode, but are synthesized on-the-fly in every reflection universe */
@@ -969,7 +993,6 @@ class Definitions {
     this.ctx = ctx
     if (!_isInitialized) {
       makeScalaSpecial()
-      makeScalaSpecialPhantom()
 
       // force initialization of every symbol that is synthesized or hijacked by the compiler
       val forced = syntheticCoreClasses ++ syntheticCoreMethods ++ ScalaValueClasses()
@@ -994,54 +1017,5 @@ class Definitions {
   lazy val PhantomNothingClass: ClassSymbol =
     enterCompleteClassSymbol(PhantomPackageClass, tpnme.PhantomNothing, AbstractFinal, List(PhantomAnyType))
   def PhantomNothingType = PhantomNothingClass.typeRef
-
-  def PhantomsFunctionClass(phantomicity: List[Boolean]): ClassSymbol =
-    ctx.requiredClass("dotty.phantom." + tpnme.PhantomsFunction(phantomicity))
-
-  def PhantomsFunctionType(phantomicity: List[Boolean]): TypeRef =
-    PhantomsFunctionClass(phantomicity).typeRef
-
-  def isPhantomFunctionClass(sym: Symbol)(implicit ctx: Context): Boolean =
-    sym.exists && sym.owner == PhantomPackageClass && nme.isPhantomsFunction(sym.name)
-
-  private def newPhantomsFunctionNTrait(phantomicity: List[Boolean]) = {
-    val completer = new LazyType {
-      def complete(denot: SymDenotation)(implicit ctx: Context): Unit = {
-        val cls = denot.asClass.classSymbol
-        val decls = newScope
-        val phantomFunctionArity = phantomicity.length
-        val erasedFunctionArity = phantomicity.count(!_)
-
-        var index1 = 0
-        def nextIndex = { index1 += 1; index1 }
-        val argParams =
-          for ((isPhantom, i) <- phantomicity.zipWithIndex) yield {
-            val name =
-              if (isPhantom) tpnme.phantomFunctionPhantomTypeParam(phantomFunctionArity, i)
-              else ("scala$Function" + erasedFunctionArity + "$$T" + nextIndex).toTypeName
-            val bounds = if (isPhantom) TypeBounds.emptyPhantom else TypeBounds.empty
-            enterTypeParam(cls, name, Contravariant, decls, bounds)
-        }
-
-        val resParam =
-          enterTypeParam(cls, ("scala$Function" + erasedFunctionArity + "$$R").toTypeName, Covariant, decls, TypeBounds.empty)
-
-        val (methodType, parentTraits) = /*
-          if (name.startsWith(tpnme.ImplicitFunction)) {
-            val superTrait =
-              FunctionType(arity).appliedTo(argParams.map(_.typeRef) ::: resParam.typeRef :: Nil)
-            (ImplicitMethodType, ctx.normalizeToClassRefs(superTrait :: Nil, cls, decls))
-          }
-          else */ (MethodType, Nil)
-        val applyMeth =
-          decls.enter(
-            newMethod(cls, nme.apply,
-              methodType(argParams.map(_.typeRef), resParam.typeRef), Deferred))
-        denot.info =
-          ClassInfo(PhantomPackageClass.thisType, cls, ObjectType :: parentTraits, decls)
-      }
-    }
-    newClassSymbol(PhantomPackageClass, tpnme.PhantomsFunction(phantomicity), NoInitsTrait, completer)
-  }
 
 }

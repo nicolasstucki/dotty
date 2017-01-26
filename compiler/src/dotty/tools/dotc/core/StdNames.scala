@@ -184,6 +184,8 @@ object StdNames {
     final val ExprApi: N             = "ExprApi"
     final val Function: N            = "Function"
     final val ImplicitFunction: N    = "ImplicitFunction"
+    final val FunctionWithPhantoms: N = "FunctionWithPhantoms"
+    final val ImplicitFunctionWithPhantoms: N = "ImplicitFunctionWithPhantoms"
     final val Mirror: N              = "Mirror"
     final val Nothing: N             = "Nothing"
     final val Null: N                = "Null"
@@ -232,42 +234,6 @@ object StdNames {
     // Phantom types
     final val PhantomAny: N     = "PhantomAny"
     final val PhantomNothing: N = "PhantomNothing"
-
-    private val phantomsFunctionPrefix = "PhantomsFunction"
-
-    def PhantomsFunction(phantomicity: List[Boolean]): N =
-      phantomsFunctionPrefix + phantomicity.length + "_" + phantomicity.map(if (_) '0' else '1').mkString
-
-    def isPhantomsFunction(name: Name): Boolean = {
-      val str = name.toString
-      if (str.length <= phantomsFunctionPrefix.length || !str.startsWith(phantomsFunctionPrefix)) false
-      else name.toString.contains("_")
-    }
-
-    def phantomsFunctionArity(name: Name): Int = {
-      Try {
-        val arityString = name.toString.substring(phantomsFunctionPrefix.length, name.toString.indexOf('_'))
-        Integer.parseInt(arityString)
-      }.getOrElse(-1)
-    }
-
-    def phantomsFunctionPhantomicity(name: Name): List[Boolean] = {
-      if (!isPhantomsFunction(name)) immutable.Nil
-      else {
-        val phantomicityString = name.toString.substring(name.toString.indexOf('_') + 1).toCharArray
-        if (phantomicityString.exists(c => c != '0' && c != '1')) immutable.Nil
-        else phantomicityString.map(_ == '0').toList
-      }
-    }
-
-    def phantomsFunctionErasedArity(name: Name): Int =
-      name.toString.substring(name.toString.indexOf('_')).toCharArray.count(_ == '1')
-
-    def phantomFunctionPhantomTypeParam(arity: Int, index: Int): N =
-      "scala$phantom$PhantomsFunction" + arity + "$$P" + index
-
-    def isPhantomFunctionPhantomType(name: Name): Boolean =
-      name.toString.startsWith("scala$phantom$PhantomsFunction")
 
 // ----- Term names -----------------------------------------
 
