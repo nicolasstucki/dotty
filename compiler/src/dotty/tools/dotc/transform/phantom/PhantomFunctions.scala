@@ -99,6 +99,20 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
           }
         }
 
+      case tp: PolyType =>
+        val newResType = tp.resType match {
+          case resType: MethodType =>
+            val newParamTypes = resType.paramTypes.map {
+              case p: RefinedType if isPhantomFunctionType(p) => erasedPhantomFunctionClass(p)
+              case p => p
+            }
+            MethodType(resType.paramNames, newParamTypes, resType.resultType)
+          case resType => resType
+        }
+
+        if (tp.resType =:= newResType) tp
+        else tp.derivedPolyType(tp.paramNames, tp.paramBounds, newResType)
+
       case tp: RefinedType if isPhantomFunctionType(tp) =>
         erasedPhantomFunctionClass(tp)
 
