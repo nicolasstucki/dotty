@@ -59,7 +59,7 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
   }
 
   override def transformSelect(tree: Select)(implicit ctx: Context, info: TransformerInfo): Tree = {
-    if (tree.name != nme.apply || !defn.isPhantomFunctionClass(tree.symbol.owner)) tree
+    if (tree.name != nme.apply || !isSomePhantomFunction(tree.symbol.owner)) tree
     else tree.qualifier.select(nme.apply)
   }
 
@@ -67,11 +67,11 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
 
   def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type = {
     tp match {
-      case tp: ClassInfo if tp.parents.exists(p => defn.isPhantomFunctionClass(p.info.classSymbol)) =>
+      case tp: ClassInfo if tp.parents.exists(p => isSomePhantomFunction(p.info.classSymbol)) =>
         val newParents = tp.classParents map {
-          case parent: TypeRef if defn.isPhantomFunctionClass(parent.info.classSymbol) =>
-            defn.FunctionType(countNonPhantomParametersOfParent(tp.classSymbol.asClass, parent) - 1)
-
+          case parent: TypeRef if isSomePhantomFunction(parent.info.classSymbol) =>
+            val arity = countNonPhantomParametersOfParent(tp.classSymbol.asClass, parent) - 1
+            getErasedFunctionType(arity, parent.info.classSymbol)
           case parent => parent
         }
 
@@ -85,15 +85,17 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
       case tp: MethodType =>
         val erasedParamTypes = tp.paramTypes.map {
           case tpe: RefinedType if isPhantomFunctionType(tpe) => erasedPhantomFunctionClass(tpe)
-          case tpe => tpe
+          case tpe => tpe // TODO if not a refined type
         }
 
-        if (erasedParamTypes == tp.paramTypes) {
+        val erasedResultType = tp.resultType // TODO
+
+        if (erasedParamTypes == tp.paramTypes && erasedResultType == tp.resultType) {
           tp
         } else {
           tp match {
-            case tp: ImplicitMethodType => ImplicitMethodType(tp.paramNames, erasedParamTypes, tp.resultType)
-            case tp => MethodType(tp.paramNames, erasedParamTypes, tp.resultType)
+            case tp: ImplicitMethodType => ImplicitMethodType(tp.paramNames, erasedParamTypes, erasedResultType)
+            case tp => MethodType(tp.paramNames, erasedParamTypes, erasedResultType)
           }
         }
 
@@ -111,15 +113,15 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
 
   @tailrec private def isPhantomFunctionType(tpe: Type)(implicit ctx: Context): Boolean = tpe match {
     case tpe: RefinedType => isPhantomFunctionType(tpe.parent)
-    case _                => defn.isPhantomFunctionClass(tpe.classSymbol)
+    case _                => isSomePhantomFunction(tpe.classSymbol)
   }
 
-  private def erasedPhantomFunctionClass(tpe: RefinedType)(implicit ctx: Context): Type = {
+  private def erasedPhantomFunctionClass(tpe: Type)(implicit ctx: Context): Type = {
     def replaceFunctionClassAndParamTypes(tp: Type): Type = tp match {
       case RefinedType(parent, refinedName, refinedInfo) =>
         if (isFunctionWithPhantomsTypeParam(refinedName)) replaceFunctionClassAndParamTypes(parent)
         else RefinedType(replaceFunctionClassAndParamTypes(parent), refinedName, refinedInfo)
-      case tp: TypeRef => defn.FunctionType(tp.name.asTypeName.functionWithPhantomsErasedArity)
+      case tp: TypeRef => getErasedFunctionType(tp.name.asTypeName.functionWithPhantomsErasedArity, tp.classSymbol)
     }
 
     replaceFunctionClassAndParamTypes(tpe)
@@ -128,8 +130,13 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
   private def countNonPhantomParametersOfParent(cls: ClassSymbol, parent: Type)(implicit ctx: Context): Int =
     parent.typeParams.count(!_.paramRef.typeSymbol.overriddenSymbol(cls).paramBounds.isPhantom)
 
-  private def isFunctionWithPhantomsTypeParam(name: Name): Boolean = {
-    def test(name2: Name): Boolean = name.startsWith(tpnme.scala_ ++ "$" ++ name2)
-    test(tpnme.FunctionWithPhantoms) || test(tpnme.ImplicitFunctionWithPhantoms)
-  }
+  private def isFunctionWithPhantomsTypeParam(name: Name): Boolean =
+    name.startsWith(tpnme.scala_ ++ "$" ++ tpnme.FunctionWithPhantoms)
+
+  private def isSomePhantomFunction(sym: Symbol)(implicit ctx: Context): Boolean =
+    defn.isPhantomFunctionClass(sym) || defn.isImplicitPhantomFunctionClass(sym)
+
+  private def getErasedFunctionType(arity: Int, from: Symbol)(implicit ctx: Context): TypeRef =
+    defn.FunctionType(arity, defn.isImplicitPhantomFunctionClass(from))
+
 }

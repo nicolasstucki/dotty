@@ -669,7 +669,7 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
       val funCls = {
         val isImplict = tree.isInstanceOf[untpd.ImplicitFunction]
         val argPhantomicity = args.map(arg => typed(arg).tpe.isPhantom)
-        if (argPhantomicity.contains(true)) defn.PhantomsFunctionClass(argPhantomicity, isImplict)
+        if (argPhantomicity.contains(true)) defn.FunctionWithPhantomsClass(argPhantomicity, isImplict)
         else if (isImplict) defn.ImplicitFunctionClass(args.length)
         else defn.FunctionClass(args.length)
       }

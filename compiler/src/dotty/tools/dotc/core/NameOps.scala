@@ -270,12 +270,10 @@ object NameOps {
       name.toString.startsWith(ImplicitFunctionWithPhantoms.toString) && name.toString.contains("_")
 
     def functionWithPhantomsPhantomicity: List[Boolean] = {
-      if (!isFunctionWithPhantoms && isImplicitFunctionWithPhantoms) immutable.Nil
-      else {
-        val phantomicityString = name.toString.substring(name.toString.indexOf('_') + 1).toCharArray
-        if (phantomicityString.exists(c => c != '0' && c != '1')) immutable.Nil
-        else phantomicityString.map(_ == '0').toList
-      }
+      assert(isFunctionWithPhantoms || isImplicitFunctionWithPhantoms)
+      val phantomicityString = name.toString.substring(name.toString.indexOf('_') + 1).toCharArray
+      assert(phantomicityString.forall(c => c == '0' || c == '1'), name)
+      phantomicityString.map(_ == '0').toList
     }
 
     /** The name of the generic runtime operation corresponding to an array operation */

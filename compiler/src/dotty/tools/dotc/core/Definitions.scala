@@ -132,20 +132,20 @@ class Definitions {
         denot.info = ClassInfo(ScalaPackageClass.thisType, cls, ObjectType :: parentTraits, decls)
       }
       private final def paramTypeVariance(i: Int): FlagSet = if (i < arity) Contravariant else Covariant
+      protected def scalaFunctionPrefix = tpnme.scala_ ++ "$" ++ tpnme.Function
     }
 
     val completer = {
       if (name.isFunctionWithPhantoms || name.isImplicitFunctionWithPhantoms) {
         new LazyFunctionType(name) {
           private val phantomicity = name.functionWithPhantomsPhantomicity
-          private val erasedFunctionArity = phantomicity.count(!_)
-          private val erasedName = name.functionWithPhantomsErasedName
+          private val erasedArity = name.functionWithPhantomsErasedArity
           protected def arity: Int = phantomicity.length
           protected def erasedParamNum(i: Int): Int = phantomicity.iterator.take(i).count(!_) + 1
           protected def paramTypeName(i: Int): TypeName = {
-            if (i == arity) tpnme.scala_ ++ "$" ++ erasedName ++ "$$R"
-            else if (phantomicity(i)) tpnme.scala_ ++  "$" ++ name ++ "$$P" ++ i.toString
-            else tpnme.scala_ ++ "$" ++ erasedName ++ "$$T" ++ erasedParamNum(i).toString
+            if (i == arity) scalaFunctionPrefix ++ erasedArity.toString ++ "$$R"
+            else if (phantomicity(i)) tpnme.scala_ ++  "$" ++ tpnme.FunctionWithPhantoms ++ "$$P" ++ i.toString
+            else scalaFunctionPrefix ++ erasedArity.toString ++ "$$T" ++ erasedParamNum(i).toString
           }
           protected def paramTypeBound(i: Int): TypeBounds =
             if (i != phantomicity.length && phantomicity(i)) TypeBounds.emptyPhantom else TypeBounds.empty
@@ -156,7 +156,7 @@ class Definitions {
           protected val arity: Int = name.functionArity
           protected def paramTypeName(i: Int): TypeName = {
             val paramName = if (i != arity) "T" + i else "R"
-            tpnme.scala_ ++ "$" ++ name ++ paramName ++ "$$" ++ paramName
+            scalaFunctionPrefix ++ i.toString ++ "$$" ++ paramName
           }
           protected def paramTypeBound(i: Int): TypeBounds = TypeBounds.empty
           protected def superTraitIfImplicit: TypeRef = FunctionType(arity)
@@ -744,14 +744,15 @@ class Definitions {
     else if (n < MaxImplementedFunctionArity) ImplementedFunctionType(n)
     else FunctionClass(n).typeRef
 
-  def PhantomsFunctionClass(phantomicity: List[Boolean], isImplicit: Boolean): ClassSymbol = {
-    val prefix = if (isImplicit) tpnme.ImplicitFunctionWithPhantoms else tpnme.FunctionWithPhantoms
+  def FunctionWithPhantomsClass(phantomicity: List[Boolean], isImplicit: Boolean): ClassSymbol = {
+    assert(phantomicity.nonEmpty)
+    val prefix = if (isImplicit && !ctx.erasedTypes) tpnme.ImplicitFunctionWithPhantoms else tpnme.FunctionWithPhantoms
     val classPath = "scala." + prefix + phantomicity.length + "_" + phantomicity.map(if (_) '0' else '1').mkString
     ctx.requiredClass(classPath)
   }
 
   def PhantomsFunctionType(phantomicity: List[Boolean], isImplicit: Boolean): TypeRef =
-    PhantomsFunctionClass(phantomicity, isImplicit).typeRef
+    FunctionWithPhantomsClass(phantomicity, isImplicit).typeRef
 
   private lazy val TupleTypes: Set[TypeRef] = TupleType.toSet
   private lazy val ProductTypes: Set[TypeRef] = ProductNType.toSet
