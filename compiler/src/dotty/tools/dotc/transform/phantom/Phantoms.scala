@@ -3,7 +3,7 @@ package dotty.tools.dotc.transform.phantom
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Symbols._
-import dotty.tools.dotc.core.Types.{ImplicitMethodType, JavaMethodType, MethodType, MethodicType, PolyType, Type}
+import dotty.tools.dotc.core.Types.{ClassInfo, DeepTypeMap, ImplicitMethodType, JavaMethodType, MethodType, MethodicType, PolyType, RefinedType, Type, TypeRef}
 
 import scala.annotation.tailrec
 

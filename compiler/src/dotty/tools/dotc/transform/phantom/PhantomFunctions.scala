@@ -2,17 +2,13 @@ package dotty.tools.dotc.transform.phantom
 
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.core.Decorators._
 import dotty.tools.dotc.core.DenotTransformers._
-import dotty.tools.dotc.core.Denotations.SingleDenotation
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.Phases._
 import dotty.tools.dotc.core.StdNames._
-import dotty.tools.dotc.core.SymDenotations.ClassDenotation
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Types._
-import dotty.tools.dotc.transform._
 import dotty.tools.dotc.transform.TreeTransforms.{MiniPhaseTransform, TransformerInfo}
 
 import scala.annotation.tailrec
@@ -53,7 +49,7 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
   override def transformTypeTree(tree: TypeTree)(implicit ctx: Context, info: TransformerInfo): Tree = {
     tree.tpe match {
       case tp: RefinedType if isPhantomFunctionType(tp) =>
-        TypeTree(erasedPhantomFunctionClass(tp))
+        TypeTree(eraseFunctionWithPhantom(tp))
       case _ =>  tree
     }
   }
@@ -65,63 +61,7 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
 
   /* Symbol transform */
 
-  def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type = {
-    tp match {
-      case tp: ClassInfo if tp.parents.exists(p => isSomePhantomFunction(p.info.classSymbol)) =>
-        val newParents = tp.classParents map {
-          case parent: TypeRef if isSomePhantomFunction(parent.info.classSymbol) =>
-            val arity = countNonPhantomParametersOfParent(tp.classSymbol.asClass, parent) - 1
-            getErasedFunctionType(arity, parent.info.classSymbol)
-          case parent => parent
-        }
-
-        val newDecls = tp.decls.filteredScope { decl =>
-          !decl.isType || !isFunctionWithPhantomsTypeParam(decl.name)
-        }
-
-        ClassInfo(tp.prefix, tp.cls, newParents, newDecls, tp.selfInfo)
-
-      case tp: JavaMethodType => tp
-      case tp: MethodType =>
-        val erasedParamTypes = tp.paramTypes.map {
-          case tpe: RefinedType if isPhantomFunctionType(tpe) => erasedPhantomFunctionClass(tpe)
-          case tpe => tpe // TODO if not a refined type
-        }
-
-        val erasedResultType = tp.resultType // TODO
-
-        if (erasedParamTypes == tp.paramTypes && erasedResultType == tp.resultType) {
-          tp
-        } else {
-          tp match {
-            case tp: ImplicitMethodType => ImplicitMethodType(tp.paramNames, erasedParamTypes, erasedResultType)
-            case tp => MethodType(tp.paramNames, erasedParamTypes, erasedResultType)
-          }
-        }
-
-      case tp: PolyType =>
-        val newResType = tp.resType match {
-          case resType: MethodType =>
-            val newParamTypes = resType.paramTypes.map {
-              case p: RefinedType if isPhantomFunctionType(p) => erasedPhantomFunctionClass(p)
-              case p => p
-            }
-            MethodType(resType.paramNames, newParamTypes, resType.resultType)
-          case resType => resType
-        }
-
-        if (tp.resType =:= newResType) tp
-        else tp.derivedPolyType(tp.paramNames, tp.paramBounds, newResType)
-
-      case tp: RefinedType if isPhantomFunctionType(tp) =>
-        erasedPhantomFunctionClass(tp)
-
-      case ExprType(tp: RefinedType) if isPhantomFunctionType(tp) =>
-        ExprType(erasedPhantomFunctionClass(tp))
-
-      case _ => tp
-    }
-  }
+  def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type = eraseFunctionWithPhantom(tp)
 
   /* private methods */
 
@@ -130,15 +70,32 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
     case _                => isSomePhantomFunction(tpe.classSymbol)
   }
 
-  private def erasedPhantomFunctionClass(tpe: Type)(implicit ctx: Context): Type = {
-    def replaceFunctionClassAndParamTypes(tp: Type): Type = tp match {
-      case RefinedType(parent, refinedName, refinedInfo) =>
-        if (isFunctionWithPhantomsTypeParam(refinedName)) replaceFunctionClassAndParamTypes(parent)
-        else RefinedType(replaceFunctionClassAndParamTypes(parent), refinedName, refinedInfo)
-      case tp: TypeRef => getErasedFunctionType(tp.name.asTypeName.functionWithPhantomsErasedArity, tp.classSymbol)
-    }
+  private def eraseFunctionWithPhantom(tpe: Type)(implicit ctx: Context): Type = {
+    new DeepTypeMap {
+      override def apply(tp: Type): Type = tp match {
+        case RefinedType(parent, refinedName, _) if isFunctionWithPhantomsTypeParam(refinedName) =>
+          apply(parent)
 
-    replaceFunctionClassAndParamTypes(tpe)
+        case tp: TypeRef if isSomePhantomFunction(tp.classSymbol) =>
+          val erasedArity = tp.name.asTypeName.functionWithPhantomsErasedArity
+          val isImplicit = defn.isImplicitPhantomFunctionClass(tp.classSymbol)
+          defn.FunctionType(erasedArity, isImplicit)
+
+        case tp: ClassInfo if tp.parents.exists(p => isSomePhantomFunction(p.info.classSymbol)) =>
+          val newParents = tp.classParents map {
+            case parent: TypeRef if isSomePhantomFunction(parent.info.classSymbol) =>
+              val arity = countNonPhantomParametersOfParent(tp.classSymbol.asClass, parent) - 1
+              getErasedFunctionType(arity, parent.info.classSymbol)
+            case parent => parent
+          }
+
+          val newDecls = tp.decls.filteredScope { decl => !decl.isType || !isFunctionWithPhantomsTypeParam(decl.name) }
+
+          ClassInfo(tp.prefix, tp.cls, newParents, newDecls, tp.selfInfo)
+
+        case tp => mapOver(tp)
+      }
+    }.apply(tpe)
   }
 
   private def countNonPhantomParametersOfParent(cls: ClassSymbol, parent: Type)(implicit ctx: Context): Int =
