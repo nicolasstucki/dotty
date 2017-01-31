@@ -22,7 +22,7 @@ class PhantomParamErasure extends MiniPhaseTransform with InfoTransformer {
 
   /** List of names of phases that should precede this phase */
   override def runsAfter: Set[Class[_ <: Phase]] =
-    Set(classOf[PhantomChecks])
+    Set(classOf[PhantomParamLift])
 
   /** Check what the phase achieves, to be called at any point after it is finished. */
   override def checkPostCondition(tree: Tree)(implicit ctx: Context): Unit = {
@@ -51,45 +51,9 @@ class PhantomParamErasure extends MiniPhaseTransform with InfoTransformer {
     }
   }
 
-  override def transformSelect(tree: Select)(implicit ctx: Context, info: TransformerInfo): Tree = {
-    tree.qualifier match {
-      case _: Ident => tree
-      case qual if tree.tpe.isPhantom =>
-        // We keep the name of selected member in the name of the synthetic val to ease debugging.
-        val synthVal = SyntheticValDef(ctx.freshName("phantomLift$" + tree.name + "$").toTermName, tree.qualifier)
-        val synthValRef = Ident(synthVal.symbol.termRef)
-        transform(Block(List(synthVal), Select(synthValRef, tree.name)))
-
-      case _ => tree
-    }
-  }
-
   override def transformApply(tree: Apply)(implicit ctx: Context, info: TransformerInfo): Tree = {
-    if (returnsPhantom(tree.tpe)) {
-      tree
-    } else if (!tree.args.exists(arg => arg.tpe.isPhantom)) {
-      tree.fun match {
-        case Block(stats, fun) => Block(stats, cpy.Apply(tree)(fun, tree.args))
-        case _                 => tree
-      }
-    } else {
-      val synthVals = tree.args.map { arg =>
-        if (arg.tpe.isPhantom) arg
-        else SyntheticValDef(ctx.freshName("phantomLift$").toTermName, arg)
-      }
-      val newArgs = synthVals.collect {
-        case synthVal if !synthVal.tpe.isPhantom => Ident(synthVal.symbol.termRef)
-      }
-      val args = transformStats(synthVals)
-      tree.fun match {
-        case Block(stats, fun) =>
-          Block(stats ::: args, cpy.Apply(tree)(fun, newArgs))
-        case _ =>
-          val newApply = cpy.Apply(tree)(tree.fun, newArgs)
-          if (args.isEmpty) newApply
-          else Block(args, newApply)
-      }
-    }
+    if (returnsPhantom(tree.tpe) || !tree.args.exists(_.tpe.isPhantom)) tree
+    else cpy.Apply(tree)(tree.fun, tree.args.filter(!_.tpe.isPhantom))
   }
 
   override def transformDefDef(ddef: DefDef)(implicit ctx: Context, info: TransformerInfo): Tree = {

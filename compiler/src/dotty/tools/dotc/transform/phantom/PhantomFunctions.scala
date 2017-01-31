@@ -79,7 +79,7 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
           apply(parent)
 
         case tp: TypeRef if isSomePhantomFunction(tp.classSymbol) =>
-          val erasedArity = FunctionParameters(tp.name).erasedArity
+          val erasedArity = FunctionParameters(tp.classSymbol.name).erasedArity
           val isImplicit = defn.isImplicitPhantomFunctionClass(tp.classSymbol)
           FunctionParameters(erasedArity, isImplicit).functionType
 

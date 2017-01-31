@@ -57,8 +57,9 @@ class Compiler {
            new ExtensionMethods,    // Expand methods of value classes with extension methods
            new TailRec,             // Rewrite tail recursion to loops
            new LiftTry,             // Put try expressions that might execute on non-empty stacks into their own methods
-           new ClassOf),            // Expand `Predef.classOf` calls.
-      List(new PhantomParamErasure, // Rewrite trees erasing all value references of phantom types.
+           new ClassOf,             // Expand `Predef.classOf` calls.
+           new PhantomParamLift),   // TODO
+      List(new PhantomParamErasure, // Erases phantom parameters and arguments
            new PhantomFunctions,    // Erase PhantomsFunctionN to Function0
            new ExpandSAMs),         // Expand single abstract method closures to anonymous classes
       List(new PhantomDeclErasure,  // Erases defdefs and valdefs that return a phantom type

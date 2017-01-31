@@ -40,7 +40,7 @@ object FunctionParameters {
       new FunctionParametersWithPhantoms(phantomicity(name), isImplicitFunctionWithPhantoms)
     } else {
       val arity = name.anyFunctionArity
-      assert(arity != -1)
+      assert(arity != -1, name)
       apply(arity, name.startsWith(tpnme.ImplicitFunction))
     }
 
