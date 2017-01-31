@@ -155,8 +155,8 @@ class Definitions {
         new LazyFunctionType(name) {
           protected val arity: Int = name.functionArity
           protected def paramTypeName(i: Int): TypeName = {
-            val paramName = if (i != arity) "T" + i else "R"
-            scalaFunctionPrefix ++ i.toString ++ "$$" ++ paramName
+            val paramName = if (i != arity) "T" + (i + 1) else "R"
+            scalaFunctionPrefix ++ arity.toString ++ "$$" ++ paramName
           }
           protected def paramTypeBound(i: Int): TypeBounds = TypeBounds.empty
           protected def superTraitIfImplicit: TypeRef = FunctionType(arity)
