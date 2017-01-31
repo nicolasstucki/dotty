@@ -233,47 +233,19 @@ object NameOps {
       }
     }
 
-    def functionArity: Int = {
-      def test(prefix: Name): Int =
-        if (name.startsWith(prefix))
-          try name.drop(prefix.length).takeWhile(_ != '_').toString.toInt
-          catch { case ex: NumberFormatException => -1 }
-        else -1
-      test(tpnme.Function) max test(tpnme.FunctionWithPhantoms) max
-        test(tpnme.ImplicitFunction) max test(tpnme.ImplicitFunctionWithPhantoms)
-    }
+    def anyFunctionArity: Int =
+      functionArity max implicitFunctionArity max functionWithPhantomsArity max implicitFunctionWithPhantomsArity
 
-    def functionWithPhantomsErasedArity: Int = {
-      val arity = functionArity
-      if (arity == -1) {
-        -1
-      } else if (name.startsWith(tpnme.FunctionWithPhantoms) || name.startsWith(tpnme.ImplicitFunctionWithPhantoms)) {
-        val phantomicityStr = name.toString.substring(name.toString.indexOf('_') + 1).toCharArray
-        assert(phantomicityStr.length == arity, name + " " + phantomicityStr.mkString + " " + arity)
-        phantomicityStr.count(_ == '1')
-      } else {
-        arity
-      }
-    }
+    def functionArity: Int = testArity(tpnme.Function)
+    def implicitFunctionArity: Int = testArity(tpnme.ImplicitFunction)
+    def functionWithPhantomsArity: Int = testArity(tpnme.FunctionWithPhantoms)
+    def implicitFunctionWithPhantomsArity: Int = testArity(tpnme.ImplicitFunctionWithPhantoms)
 
-    def functionWithPhantomsErasedName: TypeName = {
-      val arity = functionWithPhantomsErasedArity.toString
-      if (isFunctionWithPhantoms) tpnme.Function ++ arity
-      else if (isImplicitFunctionWithPhantoms) tpnme.ImplicitFunction ++ arity
-      else tpnme.NO_NAME
-    }
-
-    def isFunctionWithPhantoms: Boolean =
-      name.toString.startsWith(FunctionWithPhantoms.toString) && name.toString.contains("_")
-
-    def isImplicitFunctionWithPhantoms: Boolean =
-      name.toString.startsWith(ImplicitFunctionWithPhantoms.toString) && name.toString.contains("_")
-
-    def functionWithPhantomsPhantomicity: List[Boolean] = {
-      assert(isFunctionWithPhantoms || isImplicitFunctionWithPhantoms)
-      val phantomicityString = name.toString.substring(name.toString.indexOf('_') + 1).toCharArray
-      assert(phantomicityString.forall(c => c == '0' || c == '1'), name)
-      phantomicityString.map(_ == '0').toList
+    private def testArity(prefix: Name): Int = {
+      if (name.startsWith(prefix))
+        try name.drop(prefix.length).takeWhile(_ != '_').toString.toInt
+        catch { case ex: NumberFormatException => -1 }
+      else -1
     }
 
     /** The name of the generic runtime operation corresponding to an array operation */

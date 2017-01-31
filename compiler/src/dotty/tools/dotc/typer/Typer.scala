@@ -666,15 +666,8 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
   def typedFunction(tree: untpd.Function, pt: Type)(implicit ctx: Context) = track("typedFunction") {
     val untpd.Function(args, body) = tree
     if (ctx.mode is Mode.Type) {
-      val funCls = {
-        val isImplict = tree.isInstanceOf[untpd.ImplicitFunction]
-        val argPhantomicity = args.map(arg => typed(arg).tpe.isPhantom)
-        if (argPhantomicity.contains(true)) defn.FunctionWithPhantomsClass(argPhantomicity, isImplict)
-        else if (isImplict) defn.ImplicitFunctionClass(args.length)
-        else defn.FunctionClass(args.length)
-      }
-      typed(cpy.AppliedTypeTree(tree)(
-        untpd.TypeTree(funCls.typeRef), args :+ body), pt)
+      val funDesc = FunctionParameters(args.map(arg => typed(arg).tpe), tree.isInstanceOf[untpd.ImplicitFunction])
+      typed(cpy.AppliedTypeTree(tree)(untpd.TypeTree(funDesc.functionType), args :+ body), pt)
     }
     else {
       val params = args.asInstanceOf[List[untpd.ValDef]]
@@ -2154,11 +2147,10 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
   }
 
   private def adaptIfPhantomsFunction(tpt: tpd.Tree, args: List[tpd.Tree])(implicit ctx: Context): tpd.Tree = {
-    lazy val phantomicity = args.init.map(_.tpe.isPhantom)
-    if (!defn.isFunctionClass(tpt.tpe.typeSymbol) || !phantomicity.contains(true)) {
+    if (!defn.isFunctionClass(tpt.tpe.typeSymbol) || !args.exists(_.tpe.isPhantom)) {
       tpt
     } else {
-      val phantomFunction = Ident(defn.PhantomsFunctionType(phantomicity, false)) // TODO detect if it is an implicit function
+      val phantomFunction = Ident(FunctionParameters(args.init.map(_.tpe), isImplicit = false).functionType) // TODO detect if it is an implicit function
       phantomFunction.setPosUnchecked(tpt.pos)
       typed(phantomFunction, AnyTypeConstructorProto)(ctx.retractMode(Mode.Pattern))
     }
