@@ -82,6 +82,8 @@ class PhantomChecks extends MiniPhaseTransform {
             ctx.error(em"After phantom erasure $sym${sym.info} and $decl${decl.info} will have the same signature: $sym$erased", tree.pos)
         }
       }
+      if (tree.tpt.tpe.isPhantom && !tree.symbol.owner.is(Flags.Method))
+        ctx.error("Classes cannot have methods that return a phantom value.", tree.pos)
     } else if (!sym.isConstructor) {
       if (!sym.owner.is(Flags.Module))
         ctx.error("Can not define methods in phantom class.", tree.pos)
