@@ -3,7 +3,7 @@ package dotty.tools.dotc.transform.phantom
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.DenotTransformers._
-import dotty.tools.dotc.core.FunctionParameters
+import dotty.tools.dotc.core.FunctionName
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.core.NameOps._
 import dotty.tools.dotc.core.Phases._
@@ -42,7 +42,7 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
     val newParents = tree.parents.map {
       case parent: TypeTree if isPhantomFunctionType(parent.tpe) =>
         val arity = countNonPhantomParametersOfParent(ctx.owner.asClass, parent.tpe) - 1
-        TypeTree(FunctionParameters(arity, ???).functionType)
+        TypeTree(defn.FunctionType(arity, ???))
       case parent => parent
     }
     cpy.Template(tree)(parents = newParents)
@@ -51,7 +51,7 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
   override def transformTypeTree(tree: TypeTree)(implicit ctx: Context, info: TransformerInfo): Tree = {
     tree.tpe match {
       case tp: RefinedType if isPhantomFunctionType(tp) =>
-        TypeTree(eraseFunctionWithPhantom(tp))
+        TypeTree(erasePhantomFunctions(tp))
       case _ =>  tree
     }
   }
@@ -63,7 +63,7 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
 
   /* Symbol transform */
 
-  def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type = eraseFunctionWithPhantom(tp)
+  def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type = erasePhantomFunctions(tp)
 
   /* private methods */
 
@@ -72,16 +72,16 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
     case _                => isSomePhantomFunction(tpe.classSymbol)
   }
 
-  private def eraseFunctionWithPhantom(tpe: Type)(implicit ctx: Context): Type = {
+  private def erasePhantomFunctions(tpe: Type)(implicit ctx: Context): Type = {
     new DeepTypeMap {
       override def apply(tp: Type): Type = tp match {
-        case RefinedType(parent, refinedName, _) if isFunctionWithPhantomsTypeParam(refinedName) =>
+        case RefinedType(parent, refinedName, _) if isPhantomFunctionTypeParam(refinedName) =>
           apply(parent)
 
-        case tp: TypeRef if isSomePhantomFunction(tp.classSymbol) =>
-          val erasedArity = FunctionParameters(tp.classSymbol.name).erasedArity
-          val isImplicit = defn.isImplicitPhantomFunctionClass(tp.classSymbol)
-          FunctionParameters(erasedArity, isImplicit).functionType
+        case tp: TypeRef =>
+          val functionName = FunctionName(tp.classSymbol)
+          if (!functionName.isFunctionName || !functionName.isPhantom) mapOver(tp)
+          else defn.FunctionType(functionName.withoutPhantoms)
 
         case tp: ClassInfo if tp.parents.exists(p => isSomePhantomFunction(p.info.classSymbol)) =>
           val newParents = tp.classParents map {
@@ -91,7 +91,7 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
             case parent => parent
           }
 
-          val newDecls = tp.decls.filteredScope { decl => !decl.isType || !isFunctionWithPhantomsTypeParam(decl.name) }
+          val newDecls = tp.decls.filteredScope { decl => !decl.isType || !isPhantomFunctionTypeParam(decl.name) }
 
           ClassInfo(tp.prefix, tp.cls, newParents, newDecls, tp.selfInfo)
 
@@ -103,13 +103,15 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
   private def countNonPhantomParametersOfParent(cls: ClassSymbol, parent: Type)(implicit ctx: Context): Int =
     parent.typeParams.count(!_.paramRef.typeSymbol.overriddenSymbol(cls).paramBounds.isPhantom)
 
-  private def isFunctionWithPhantomsTypeParam(name: Name): Boolean =
-    name.startsWith(tpnme.scala_ ++ "$" ++ tpnme.FunctionWithPhantoms)
+  private def isPhantomFunctionTypeParam(name: Name): Boolean = {
+    def test(sufix: Name) = name.startsWith(tpnme.scala_ ++ "$" ++ sufix)
+    test(tpnme.PhantomFunction) || test(tpnme.ImplicitPhantomFunction)
+  }
 
   private def isSomePhantomFunction(sym: Symbol)(implicit ctx: Context): Boolean =
-    defn.isFunctionWithPhantomsClass(sym) || defn.isImplicitPhantomFunctionClass(sym)
+    defn.isPhantomFunctionClass(sym) || defn.isImplicitPhantomFunctionClass(sym)
 
   private def getErasedFunctionType(arity: Int, from: Symbol)(implicit ctx: Context): TypeRef =
-    FunctionParameters(arity, defn.isImplicitPhantomFunctionClass(from)).functionType
+    defn.FunctionType(arity, defn.isImplicitPhantomFunctionClass(from))
 
 }

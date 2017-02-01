@@ -8,7 +8,7 @@ import Names._, StdNames._, Contexts._, Symbols._, Flags._
 import Decorators.StringDecorator
 import util.{Chars, NameTransformer}
 import Chars.isOperatorPart
-
+import FunctionName.{phantomicityOnChar, phantomicityOffChar}
 import scala.collection.immutable
 
 object NameOps {
@@ -234,18 +234,26 @@ object NameOps {
     }
 
     def anyFunctionArity: Int =
-      functionArity max implicitFunctionArity max functionWithPhantomsArity max implicitFunctionWithPhantomsArity
+      functionArity max implicitFunctionArity max phantomFunctionArity max implicitPhantomFunctionArity
 
     def functionArity: Int = testArity(tpnme.Function)
     def implicitFunctionArity: Int = testArity(tpnme.ImplicitFunction)
-    def functionWithPhantomsArity: Int = testArity(tpnme.FunctionWithPhantoms)
-    def implicitFunctionWithPhantomsArity: Int = testArity(tpnme.ImplicitFunctionWithPhantoms)
+    def phantomFunctionArity: Int = testArityWithPhantoms(tpnme.PhantomFunction)
+    def implicitPhantomFunctionArity: Int = testArityWithPhantoms(tpnme.ImplicitPhantomFunction)
 
     private def testArity(prefix: Name): Int = {
       if (name.startsWith(prefix))
-        try name.drop(prefix.length).takeWhile(_ != '_').toString.toInt
+        try name.drop(prefix.length).toString.toInt
         catch { case ex: NumberFormatException => -1 }
       else -1
+    }
+
+    private def testArityWithPhantoms(prefix: Name): Int = {
+      if (name.startsWith(prefix)) {
+        val phantomicity = name.drop(prefix.length)
+        if (phantomicity.exists(c => c != phantomicityOnChar && c != phantomicityOffChar)) -1
+        else phantomicity.length
+      } else -1
     }
 
     /** The name of the generic runtime operation corresponding to an array operation */

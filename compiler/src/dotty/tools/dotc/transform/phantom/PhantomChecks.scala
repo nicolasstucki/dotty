@@ -144,7 +144,7 @@ class PhantomChecks extends MiniPhaseTransform {
   //TODO duplicated in PhantomFunctionErasure
   @tailrec private def isPhantomFunctionType(tpe: Type)(implicit ctx: Context): Boolean = tpe match {
     case tpe: RefinedType => isPhantomFunctionType(tpe.parent)
-    case _                => defn.isFunctionWithPhantomsClass(tpe.classSymbol)
+    case _                => defn.isPhantomFunctionClass(tpe.classSymbol)
   }
 
 }

@@ -1,7 +1,7 @@
 package dotty.tools.dotc
 package transform
 
-import core.{Constants, Flags, FunctionParameters, Mode}
+import core.{Constants, Flags, FunctionName, Mode}
 import core.Phases._
 import core.DenotTransformers._
 import core.Denotations._
@@ -352,7 +352,7 @@ object Erasure extends TypeTestsCasts{
           } else if (defn.isUnimplementedFunctionClass(owner))
             defn.FunctionXXLClass
           else if (defn.isImplicitFunctionClass(owner))
-            recur(FunctionParameters(owner.name.implicitFunctionArity, isImplicit = false).functionClass)
+            recur(defn.FunctionClass(owner.name.implicitFunctionArity))
           else
             owner
         recur(sym.owner)

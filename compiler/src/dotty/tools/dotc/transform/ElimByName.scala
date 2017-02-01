@@ -75,7 +75,7 @@ class ElimByName extends MiniPhaseTransform with InfoTransformer { thisTransform
         if (defn.isBottomType(argType)) argType = formal.widenExpr
         val argFun = arg match {
           case Apply(Select(qual, nme.apply), Nil)
-          if qual.tpe.derivesFrom(FunctionParameters(0, isImplicit = false).functionClass) && isPureExpr(qual) =>
+          if qual.tpe.derivesFrom(defn.FunctionClass(0)) && isPureExpr(qual) =>
             qual
           case _ =>
             val inSuper = if (ctx.mode.is(Mode.InSuperCall)) InSuperCall else EmptyFlags
