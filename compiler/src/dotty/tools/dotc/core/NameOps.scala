@@ -8,8 +8,8 @@ import Names._, StdNames._, Contexts._, Symbols._, Flags._
 import Decorators.StringDecorator
 import util.{Chars, NameTransformer}
 import Chars.isOperatorPart
+
 import FunctionName.{phantomicityOnChar, phantomicityOffChar}
-import scala.collection.immutable
 
 object NameOps {
 

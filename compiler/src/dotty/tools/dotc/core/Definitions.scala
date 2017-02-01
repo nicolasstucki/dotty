@@ -755,9 +755,9 @@ class Definitions {
   def isFunctionClass(cls: Symbol) = isVarArityClass(cls, tpnme.Function)
   def isImplicitFunctionClass(cls: Symbol) = isVarArityClass(cls, tpnme.ImplicitFunction)
   def isPhantomFunctionClass(sym: Symbol)(implicit ctx: Context): Boolean =
-    sym.exists && sym.owner == ScalaPackageClass && sym.name.phantomFunctionArity != -1
+    scalaClassName(sym).phantomFunctionArity != -1
   def isImplicitPhantomFunctionClass(sym: Symbol)(implicit ctx: Context): Boolean =
-    sym.exists && sym.owner == ScalaPackageClass && sym.name.implicitPhantomFunctionArity != -1
+    scalaClassName(sym).implicitPhantomFunctionArity != -1
   def isUnimplementedFunctionClass(cls: Symbol) =
     isFunctionClass(cls) && cls.name.functionArity > MaxImplementedFunctionArity
   def isAbstractFunctionClass(cls: Symbol) = isVarArityClass(cls, tpnme.AbstractFunction)

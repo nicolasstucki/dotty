@@ -10,7 +10,6 @@ import Contexts._
 import Decorators.StringDecorator
 import util.NameTransformer
 import scala.collection.breakOut
-import scala.util.Try
 
 object StdNames {
 
