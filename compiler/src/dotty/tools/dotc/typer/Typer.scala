@@ -1991,7 +1991,8 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
           missingArgs
       case _ =>
         ctx.typeComparer.GADTused = false
-        if (defn.isImplicitFunctionClass(wtp.underlyingClassRef(refinementOK = false).classSymbol) &&
+        val underlyingClassSym = wtp.underlyingClassRef(refinementOK = false).classSymbol
+        if ((defn.isImplicitFunctionClass(underlyingClassSym) || defn.isImplicitPhantomFunctionClass(underlyingClassSym)) &&
             !untpd.isImplicitClosure(tree) &&
             !isApplyProto(pt) &&
             !ctx.isAfterTyper) {
