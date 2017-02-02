@@ -994,4 +994,6 @@ class Definitions {
     enterCompleteClassSymbol(PhantomPackageClass, tpnme.PhantomNothing, AbstractFinal, List(PhantomAnyType))
   def PhantomNothingType = PhantomNothingClass.typeRef
 
+  lazy val ErasedPhantomAnyClass = ctx.requiredClass("dotty.runtime.ErasedPhantomAny")
+  def ErasedPhantomAnyType = ErasedPhantomAnyClass.typeRef
 }

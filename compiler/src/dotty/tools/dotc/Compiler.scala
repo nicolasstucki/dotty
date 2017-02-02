@@ -61,7 +61,7 @@ class Compiler {
       List(new PhantomParamErasure, // Erases phantom parameters and arguments
            new PhantomFunctions,    // Erase PhantomsFunctionN to Function0
            new ExpandSAMs),         // Expand single abstract method closures to anonymous classes
-      List(new PhantomTypeErasure,  // Erases phantom types
+      List(new PhantomAnyErasure,   // Erases PhantomAny into ErasedPhantomAny
            new TryCatchPatterns,    // Compile cases in try/catch
            new PatternMatcher,      // Compile pattern matches
            new ExplicitOuter,       // Add accessors to outer classes from nested ones.

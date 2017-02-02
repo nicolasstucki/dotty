@@ -5,7 +5,7 @@ import dotty.phantom.PhantomAny
 object EqUtil {
   import PhantomEqUtil._
   implicit class EqualsDeco[T](val x: T) extends AnyVal {
-    def ===[U] (y: U)(implicit ce: PhantomEq[T, U]) = x.equals(y)
+    inline def ===[U] (y: U)(implicit ce: PhantomEq[T, U]) = x.equals(y)
   }
 }
 

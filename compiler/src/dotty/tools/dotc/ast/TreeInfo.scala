@@ -327,7 +327,8 @@ trait TypedTreeInfo extends TreeInfo[Type] { self: Trees.Instance[Type] =>
   }
 
   /** The purity level of this expression.
-   *  @return   pure        if expression has no side effects
+   *  @return   phantom     if expression does nothing at runtime
+   *            pure        if expression has no side effects
    *            idempotent  if running the expression a second time has no side effects
    *            impure      otherwise
    *
@@ -336,46 +337,51 @@ trait TypedTreeInfo extends TreeInfo[Type] { self: Trees.Instance[Type] =>
    *  takes a different code path than all to follow; but they are idempotent
    *  because running the expression a second time gives the cached result.
    */
-  private def exprPurity(tree: Tree)(implicit ctx: Context): PurityLevel = unsplice(tree) match {
-    case EmptyTree
-       | This(_)
-       | Super(_, _)
-       | Literal(_)
-       | Closure(_, _, _) =>
-      Pure
-    case Ident(_) =>
-      refPurity(tree)
-    case Select(qual, _) =>
-      refPurity(tree).min(exprPurity(qual))
-    case TypeApply(fn, _) =>
-      exprPurity(fn)
-/*
- * Not sure we'll need that. Comment out until we find out
-    case Apply(Select(free @ Ident(_), nme.apply), _) if free.symbol.name endsWith nme.REIFY_FREE_VALUE_SUFFIX =>
-      // see a detailed explanation of this trick in `GenSymbols.reifyFreeTerm`
-      free.symbol.hasStableFlag && isIdempotentExpr(free)
-*/
-    case Apply(fn, args) =>
-      def isKnownPureOp(sym: Symbol) =
-        sym.owner.isPrimitiveValueClass || sym.owner == defn.StringClass
-      // Note: After uncurry, field accesses are represented as Apply(getter, Nil),
-      // so an Apply can also be pure.
-      if (args.isEmpty && fn.symbol.is(Stable)) exprPurity(fn)
-      else if (tree.tpe.isInstanceOf[ConstantType] && isKnownPureOp(tree.symbol))
+  private def exprPurity(tree: Tree)(implicit ctx: Context): PurityLevel = {
+    if (tree.tpe.widen.isPhantom) Phantom
+    else unsplice(tree) match {
+      case EmptyTree
+           | This(_)
+           | Super(_, _)
+           | Literal(_)
+           | Closure(_, _, _) =>
+        Pure
+      case Ident(_) =>
+        refPurity(tree)
+      case Select(qual, _) =>
+        refPurity(tree).min(exprPurity(qual))
+      case TypeApply(fn, _) =>
+        exprPurity(fn)
+      /*
+       * Not sure we'll need that. Comment out until we find out
+          case Apply(Select(free @ Ident(_), nme.apply), _) if free.symbol.name endsWith nme.REIFY_FREE_VALUE_SUFFIX =>
+            // see a detailed explanation of this trick in `GenSymbols.reifyFreeTerm`
+            free.symbol.hasStableFlag && isIdempotentExpr(free)
+      */
+      case Apply(fn, args) =>
+        def isKnownPureOp(sym: Symbol) =
+          sym.owner.isPrimitiveValueClass || sym.owner == defn.StringClass
+
+        // Note: After uncurry, field accesses are represented as Apply(getter, Nil),
+        // so an Apply can also be pure.
+        if (args.isEmpty && fn.symbol.is(Stable)) exprPurity(fn)
+        else if (tree.tpe.isInstanceOf[ConstantType] && isKnownPureOp(tree.symbol))
         // A constant expression with pure arguments is pure.
-        minOf(exprPurity(fn), args.map(exprPurity))
-      else Impure
-    case Typed(expr, _) =>
-      exprPurity(expr)
-    case Block(stats, expr) =>
-      minOf(exprPurity(expr), stats.map(statPurity))
-    case _ =>
-      Impure
+          minOf(exprPurity(fn), args.map(exprPurity))
+        else Impure
+      case Typed(expr, _) =>
+        exprPurity(expr)
+      case Block(stats, expr) =>
+        minOf(exprPurity(expr), stats.map(statPurity))
+      case _ =>
+        Impure
+    }
   }
 
   private def minOf(l0: PurityLevel, ls: List[PurityLevel]) = (l0 /: ls)(_ min _)
 
-  def isPureExpr(tree: Tree)(implicit ctx: Context) = exprPurity(tree) == Pure
+  def isPhantomExpr(tree: Tree)(implicit ctx: Context) = exprPurity(tree) == Phantom
+  def isPureExpr(tree: Tree)(implicit ctx: Context) = exprPurity(tree) >= Pure
   def isIdempotentExpr(tree: Tree)(implicit ctx: Context) = exprPurity(tree) >= Idempotent
 
   /** The purity level of this reference.
@@ -387,13 +393,16 @@ trait TypedTreeInfo extends TreeInfo[Type] { self: Trees.Instance[Type] =>
    *               flags set.
    */
   private def refPurity(tree: Tree)(implicit ctx: Context): PurityLevel =
-    if (!tree.tpe.widen.isParameterless) Pure
+    if (tree.tpe.widen.isPhantom) Phantom
+    else if (!tree.tpe.widen.isParameterless) Pure
     else if (!tree.symbol.isStable) Impure
     else if (tree.symbol.is(Lazy)) Idempotent // TODO add Module flag, sinxce Module vals or not Lazy from the start.
     else Pure
 
+  def isPhantomRef(tree: Tree)(implicit ctx: Context) =
+    refPurity(tree) == Phantom
   def isPureRef(tree: Tree)(implicit ctx: Context) =
-    refPurity(tree) == Pure
+    refPurity(tree) >= Pure
   def isIdempotentRef(tree: Tree)(implicit ctx: Context) =
     refPurity(tree) >= Idempotent
 
@@ -659,6 +668,7 @@ object TreeInfo {
     def min(that: PurityLevel) = new PurityLevel(x min that.x)
   }
 
+  val Phantom = new PurityLevel(3)
   val Pure = new PurityLevel(2)
   val Idempotent = new PurityLevel(1)
   val Impure = new PurityLevel(0)
