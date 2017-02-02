@@ -13,10 +13,6 @@ import dotty.phantom.PhantomAny
 object WithPhantomState {
   import WithPhantomStatePhantoms._
 
-  trait State extends PhantomAny // This phantom trait is erased
-  sealed trait On extends State // This phantom trait is erased
-  sealed trait Off extends State // This phantom trait is erased
-
   object Instance {
     def newInstance(): Instance[Off] = new Instance[Off]
   }
@@ -33,6 +29,10 @@ object WithPhantomState {
 }
 
 object WithPhantomStatePhantoms extends PhantomAny {
+  trait State extends PhantomAny // This phantom trait is erased
+  sealed trait On extends State // This phantom trait is erased
+  sealed trait Off extends State // This phantom trait is erased
+
   final class =::=[From <: PhantomAny, To <: PhantomAny] extends PhantomAny // This phantom class is erased
   object =::= extends PhantomAny { // This phantom object is erased
     implicit def tpEquals[A <: PhantomAny]: A =::= A = new =::=[A, A]

@@ -33,7 +33,7 @@ object WithNormalState {
 
 }
 
-object WithNormalStatePhantoms {
+object WithNormalStatePhantoms extends PhantomAny {
   final class =::=[From, To] extends PhantomAny // This phantom class is erased
   object =::= extends PhantomAny { // This phantom object is erased
     implicit def tpEquals[A]: A =::= A = new =::=[A, A]

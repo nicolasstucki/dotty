@@ -71,6 +71,17 @@ class PhantomChecks extends MiniPhaseTransform {
     trees
   }
 
+  override def transformTypeDef(tree: TypeDef)(implicit ctx: Context, info: TransformerInfo): Tree = {
+    val sym = tree.symbol
+    if (sym.isClass && sym.owner.isClass && !sym.owner.is(Package) && sym.owner.isClass) {
+      if (sym.isPhantomClass && !(sym.owner.isPhantomClass && sym.owner.is(Module)))
+        ctx.error(s"Phantom classes can only be contain phantom objects.", tree.pos)
+      else if (!sym.isPhantomClass && sym.owner.isPhantomClass)
+        ctx.error("Non phantom classes cannot be contain phantom classes.", tree.pos)
+    }
+    tree
+  }
+
   override def transformDefDef(tree: DefDef)(implicit ctx: Context, info: TransformerInfo): Tree = {
     val sym = tree.symbol
     if (!inPhantomClass(sym)) {
@@ -131,7 +142,7 @@ class PhantomChecks extends MiniPhaseTransform {
   override def transformClosure(tree: Closure)(implicit ctx: Context, info: TransformerInfo): Tree = {
     tree.tpe match {
       case tp: RefinedType if tp.refinedInfo.isPhantom && isPhantomFunctionType(tp) =>
-        ctx.error(s"Closures can not return a phantom value.", tree.pos) // TODO
+        ctx.error(s"Closures can not return a phantom value.", tree.pos)
       case _ =>
     }
     tree

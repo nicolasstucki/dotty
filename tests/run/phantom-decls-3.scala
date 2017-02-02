@@ -2,23 +2,11 @@
  *   `run tests/run/phantom.scala -Xprint-diff-del -Xprint:arrayConstructors,phantomRefErasure,phantomDeclErasure,erasure`
  * to see the the diffs after PhantomRefErasure, PhantomDeclErasure and Erasure.
  */
+import dotty.phantom.PhantomAny
+
 object Test {
-  import dotty.phantom.PhantomAny
-  import dotty.phantom.PhantomNothing
-  import Phantoms._
-
-  trait Phantoms {
-    type Clyde >: Pinky <: Inky
-  }
-
-  object Phantoms extends Phantoms {
-    trait Blinky extends PhantomAny
-    abstract class Inky extends Blinky
-    class Pinky extends Inky
-  }
 
   def main(args: Array[String]): Unit = {
-    class BlinkyImpl extends Blinky
 
     new Boo3(){
       type Boo = PhantomAny
@@ -35,5 +23,9 @@ object Test {
       println("Boo3.polyfun1")
     }
   }
-
 }
+
+trait Blinky extends PhantomAny
+abstract class Inky extends Blinky
+class Pinky extends Inky
+class BlinkyImpl extends Blinky

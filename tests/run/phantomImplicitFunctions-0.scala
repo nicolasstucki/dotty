@@ -3,6 +3,7 @@ import dotty.phantom.PhantomAny
 class Slimer extends PhantomAny
 
 object Test {
+
   def main(args: Array[String]): Unit = {
 
     implicit val world: String = "world!"
