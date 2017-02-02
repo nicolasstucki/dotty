@@ -14,7 +14,6 @@ import NameOps._
 import collection.mutable
 import reporting.diagnostic.Message
 import reporting.diagnostic.messages._
-import transform.phantom.Phantoms._
 
 trait TypeAssigner {
   import tpd._

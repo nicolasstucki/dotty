@@ -9,7 +9,7 @@ import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.StdNames._
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Types._
-import dotty.tools.dotc.transform.phantom.Phantoms._
+import dotty.tools.dotc.transform.phantom.PhantomParamErasure._
 import dotty.tools.dotc.transform.TreeTransforms.{MiniPhaseTransform, TransformerInfo}
 
 import scala.annotation.tailrec
