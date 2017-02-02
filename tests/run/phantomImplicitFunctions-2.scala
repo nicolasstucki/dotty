@@ -21,13 +21,15 @@ class Transaction {
 }
 
 class CanDoTransaction extends PhantomAny
+object CanDoTransaction extends PhantomAny {
+  def canDoTrans: CanDoTransaction = new CanDoTransaction
+}
 
 object Test {
 
   def transaction[T](op: (Transaction, CanDoTransaction) => T) = {
     val trans: Transaction = new Transaction
-    def canDoTrans: CanDoTransaction = new CanDoTransaction
-    op(trans, canDoTrans)
+    op(trans, CanDoTransaction.canDoTrans)
     trans.commit()
   }
 

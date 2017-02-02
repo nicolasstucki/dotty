@@ -1,13 +1,15 @@
 import dotty.phantom.PhantomAny
 
 class Slimer extends PhantomAny
+object Slimer extends PhantomAny {
+  implicit def phantom: Slimer = new Slimer
+}
 
 object Test {
 
   def main(args: Array[String]): Unit = {
-
     implicit val world: String = "world!"
-    implicit def phantom: Slimer = new Slimer
+    import Slimer._
 
     val i1 = (implicit (s: Slimer) => true)
     val i2 = {implicit (s: Slimer) => false}

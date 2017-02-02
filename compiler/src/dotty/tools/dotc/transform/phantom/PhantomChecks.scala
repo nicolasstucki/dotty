@@ -85,15 +85,15 @@ class PhantomChecks extends MiniPhaseTransform {
   override def transformDefDef(tree: DefDef)(implicit ctx: Context, info: TransformerInfo): Tree = {
     val sym = tree.symbol
     if (!inPhantomClass(sym)) {
-      if (sym.owner.isClass) {
+      if (tree.tpt.tpe.isPhantom) {
+        ctx.error("Classes cannot have methods that return a phantom value. Define them in a phantom object and import its content.", tree.pos)
+      } else if (sym.owner.isClass) {
         val erased = erasedPhantomParameters(sym.info)
         for (decl <- sym.owner.info.decls) {
           if ((decl ne sym) && decl.is(Method) && decl.name == sym.name && erased == erasedPhantomParameters(decl.info))
             ctx.error(em"After phantom erasure $sym${sym.info} and $decl${decl.info} will have the same signature: $sym$erased", tree.pos)
         }
       }
-      if (tree.tpt.tpe.isPhantom && !tree.symbol.owner.is(Method))
-        ctx.error("Classes cannot have methods that return a phantom value.", tree.pos)
     } else if (!sym.isConstructor) {
       if (!sym.owner.is(Module))
         ctx.error("Can not define methods in phantom class.", tree.pos)
