@@ -37,13 +37,14 @@ class PhantomAnyErasure extends MiniPhaseTransform with InfoTransformer {
   /* private methods */
 
   private def erasePhantomAnyType(tp: Type)(implicit ctx: Context): Type = {
-    object ErasePhantomAnyType extends DeepTypeMap {
-      private val phantomAnyType = defn.PhantomAnyType
-      override def apply(tp: Type): Type =
-        if (tp =:= phantomAnyType) defn.ErasedPhantomAnyType
-        else mapOver(tp)
+    val erasePhantomAnyTypeMap = new DeepTypeMap {
+      private val phantomAnyClass = defn.PhantomAnyClass
+      override def apply(tp: Type): Type = tp match {
+        case tp: TypeRef if tp.symbol eq phantomAnyClass => defn.ErasedPhantomAnyType
+        case _ => mapOver(tp)
+      }
     }
-    ErasePhantomAnyType(tp)
+    erasePhantomAnyTypeMap(tp)
   }
 
 }
