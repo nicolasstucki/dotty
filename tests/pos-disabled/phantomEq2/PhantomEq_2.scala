@@ -2,6 +2,7 @@
 /* This is a version of ../pos/phantomEq.scala that tests phantom clases with separate compilation */
 object PhantomEq {
   import PhantomEqUtil._
+  import EqUtil._
 
   "ghi" === "jkl"
   3 === 4

@@ -3,7 +3,8 @@ import dotty.phantom.PhantomNothing
 
 class Blinky extends PhantomAny
 
-class phantomStats {
+class AnyClass {
+  import Phantoms._
 
   new Blinky // error: Expression returning a phantom type can not be in statement position.
   phantom1 // error: Expression returning a phantom type can not be in statement position.
@@ -38,7 +39,23 @@ class phantomStats {
     }
     ()
   }
+}
 
+object PhantomObjcet extends PhantomAny {
+  import Phantoms._
+  new Blinky // error: Expression returning a phantom type can not be in statement position.
+  phantom1 // error: Expression returning a phantom type can not be in statement position.
+  phantom2() // error: Expression returning a phantom type can not be in statement position.
+}
+
+class PhantomClass extends PhantomAny {
+  import Phantoms._
+  new Blinky // error: Expression returning a phantom type can not be in statement position.
+  phantom1 // error: Expression returning a phantom type can not be in statement position.
+  phantom2() // error: Expression returning a phantom type can not be in statement position.
+}
+
+object Phantoms extends PhantomAny {
   def phantom1: PhantomAny = new Blinky
   def phantom2(): PhantomAny = new Blinky
 

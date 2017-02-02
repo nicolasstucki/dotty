@@ -1,10 +1,13 @@
-
 /* This is a example of how to implement Eq using erasable phantom types.
  *
  * See also: ../pos/phantomEq.scala
  */
+
+import dotty.phantom.PhantomAny
+
 object PhantomEq {
   import PhantomEqUtil._
+  import EqUtil._
 
   "abc" === "abc"
   1 === 4
@@ -16,14 +19,16 @@ object PhantomEq {
   List(1, 2) === "" // error
 
 }
-
-object PhantomEqUtil {
-  class PhantomEq[-L, -R] extends dotty.phantom.PhantomAny
-  type PhantomEqEq[T] = PhantomEq[T, T]
-
+object EqUtil {
+  import PhantomEqUtil._
   implicit class EqualsDeco[T](val x: T) extends AnyVal {
     def ===[U] (y: U)(implicit ce: PhantomEq[T, U]) = x.equals(y)
   }
+}
+
+object PhantomEqUtil extends PhantomAny {
+  class PhantomEq[-L, -R] extends PhantomAny
+  type PhantomEqEq[T] = PhantomEq[T, T]
 
   implicit def eqString: PhantomEqEq[String] = new PhantomEqEq[String]
   implicit def eqInt: PhantomEqEq[Int] = new PhantomEqEq[Int]

@@ -5,13 +5,12 @@ import dotty.tools.dotc.ast.Trees
 import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.Decorators._
-import dotty.tools.dotc.core.Flags
+import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.StdNames._
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.core.Types._
 import dotty.tools.dotc.transform.phantom.Phantoms._
 import dotty.tools.dotc.transform.TreeTransforms.{MiniPhaseTransform, TransformerInfo}
-import dotty.tools.dotc.typer.ErrorReporting._
 
 import scala.annotation.tailrec
 
@@ -78,14 +77,14 @@ class PhantomChecks extends MiniPhaseTransform {
       if (sym.owner.isClass) {
         val erased = erasedPhantomParameters(sym.info)
         for (decl <- sym.owner.info.decls) {
-          if ((decl ne sym) && decl.is(Flags.Method) && decl.name == sym.name && erased == erasedPhantomParameters(decl.info))
+          if ((decl ne sym) && decl.is(Method) && decl.name == sym.name && erased == erasedPhantomParameters(decl.info))
             ctx.error(em"After phantom erasure $sym${sym.info} and $decl${decl.info} will have the same signature: $sym$erased", tree.pos)
         }
       }
-      if (tree.tpt.tpe.isPhantom && !tree.symbol.owner.is(Flags.Method))
+      if (tree.tpt.tpe.isPhantom && !tree.symbol.owner.is(Method))
         ctx.error("Classes cannot have methods that return a phantom value.", tree.pos)
     } else if (!sym.isConstructor) {
-      if (!sym.owner.is(Flags.Module))
+      if (!sym.owner.is(Module))
         ctx.error("Can not define methods in phantom class.", tree.pos)
       else if (!tree.tpt.tpe.isPhantom)
         ctx.error("Phantom modules can only have methods that return a phantom value.", tree.pos)
@@ -116,13 +115,13 @@ class PhantomChecks extends MiniPhaseTransform {
   override def transformValDef(tree: tpd.ValDef)(implicit ctx: Context, info: TransformerInfo): Tree = {
     val sym = tree.symbol
     def keyword =
-      if (sym.is(Flags.Mutable)) "var"
-      else if (sym.is(Flags.Lazy)) "lazy val"
+      if (sym.is(Mutable)) "var"
+      else if (sym.is(Lazy)) "lazy val"
       else "val"
     if (inPhantomClass(sym)) {
-      if (!sym.is(Flags.ParamAccessor))
+      if (!sym.is(ParamAccessor) && !sym.is(Module))
         ctx.error(s"Phantom classes can not have '$keyword' fields.", tree.pos)
-    } else if (!sym.is(Flags.Param) && !sym.is(Flags.ParamAccessor) && !sym.is(Flags.Module) && tree.tpt.tpe.isPhantom) {
+    } else if (!sym.is(Param) && !sym.is(ParamAccessor) && !sym.is(Module) && tree.tpt.tpe.isPhantom) {
       ctx.error(s"Can not define '$keyword' fields with phantom values.", tree.pos)
     }
 
