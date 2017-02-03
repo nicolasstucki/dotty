@@ -73,11 +73,20 @@ class PhantomChecks extends MiniPhaseTransform {
 
   override def transformTypeDef(tree: TypeDef)(implicit ctx: Context, info: TransformerInfo): Tree = {
     val sym = tree.symbol
-    if (sym.isClass && sym.owner.isClass && !sym.owner.is(Package) && sym.owner.isClass) {
-      if (sym.isPhantomClass && !(sym.owner.isPhantomClass && sym.owner.is(Module)))
-        ctx.error(s"Phantom classes can only be contain phantom objects.", tree.pos)
-      else if (!sym.isPhantomClass && sym.owner.isPhantomClass)
-        ctx.error("Non phantom classes cannot be contain phantom classes.", tree.pos)
+    if (sym.isClass) {
+      val isPhantomClass = sym.isPhantomClass
+      if (sym.owner.is(Package) && sym.is(Module) && sym.companionClass.exists) {
+        if (isPhantomClass && !sym.companionClass.isPhantomClass)
+          ctx.error("Module of a non phantom class cannot be phantom.", tree.pos)
+        else if (!isPhantomClass && sym.companionClass.isPhantomClass)
+          ctx.error("Module of a phantom class must be phantom.", tree.pos)
+      } else if (sym.owner.isClass && !sym.owner.is(Package)) {
+        // Inner classes checks
+        if (isPhantomClass && !(sym.owner.isPhantomClass && sym.owner.is(Module)))
+          ctx.error(s"Phantom classes can only be contain phantom objects.", tree.pos)
+        else if (!isPhantomClass && sym.owner.isPhantomClass)
+          ctx.error("Non phantom classes cannot be contain phantom classes.", tree.pos)
+      }
     }
     tree
   }
