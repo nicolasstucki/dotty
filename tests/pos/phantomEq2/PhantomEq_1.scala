@@ -1,6 +1,5 @@
 
 /* This is a version of ../pos/phantomEq.scala that tests phantom clases with separate compilation */
-import dotty.phantom.PhantomAny
 
 object EqUtil {
   import PhantomEqUtil._

@@ -1,5 +1,3 @@
-import dotty.phantom.PhantomAny
-import dotty.phantom.PhantomNothing
 
 class Blinky extends PhantomAny
 

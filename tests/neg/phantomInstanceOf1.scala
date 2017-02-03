@@ -1,5 +1,3 @@
-import dotty.phantom.PhantomAny
-import dotty.phantom.PhantomNothing
 
 class phantomInstanceOf1 {
   null.asInstanceOf[PhantomAny] // error

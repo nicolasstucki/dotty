@@ -7,7 +7,6 @@
  *
  * See also: ../neg/phantomEq.scala
  */
-import dotty.phantom.PhantomAny
 
 object PhantomEq {
   import PhantomEqUtil._

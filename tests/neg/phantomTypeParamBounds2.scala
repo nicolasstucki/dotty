@@ -1,5 +1,3 @@
-import dotty.phantom.PhantomAny
-import dotty.phantom.PhantomNothing
 
 class phantomTypeParamBounds2 {
   def fun1[X <: PhantomAny & Any] = ??? // error

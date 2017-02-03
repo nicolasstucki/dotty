@@ -1,4 +1,3 @@
-import dotty.phantom._
 
 class Casper extends PhantomAny
 

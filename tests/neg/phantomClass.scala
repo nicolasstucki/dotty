@@ -1,5 +1,3 @@
-import dotty.phantom.PhantomAny
-import dotty.phantom.PhantomNothing
 
 trait Foo
 trait Boo extends PhantomAny

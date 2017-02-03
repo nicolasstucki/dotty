@@ -1,4 +1,3 @@
-import dotty.phantom.PhantomAny
 
 object AnyObject {
   object AnyObjectBoo extends PhantomAny // error

@@ -5,7 +5,6 @@
  * This is an example of how to write methods that return non phantom (i.e. methods with runtime code) values in a phantom class.
  */
 
-import dotty.phantom.PhantomAny
 
 object Test {
 

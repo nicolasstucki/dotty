@@ -3,7 +3,6 @@
  * to see the the diffs after PhantomRefErasure, PhantomDeclErasure and Erasure.
  */
 object Test {
-  import dotty.phantom.PhantomNothing
 
   def main(args: Array[String]): Unit = {}
 

@@ -7,7 +7,6 @@
  * See also: ../pos/phantomEvidence-1.scala
  */
 
-import dotty.phantom.PhantomAny
 
 /** In this variant, the traits for the stats are also erased. */
 object WithPhantomState {

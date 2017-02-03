@@ -3,7 +3,6 @@
  * See also: ../pos/phantomEq.scala
  */
 
-import dotty.phantom.PhantomAny
 
 object PhantomEq {
   import PhantomEqUtil._

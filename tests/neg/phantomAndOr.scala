@@ -1,5 +1,3 @@
-import dotty.phantom.PhantomAny
-import dotty.phantom.PhantomNothing
 
 class BooFunDef1 {
   def fun1(b: PhantomAny | Any) = ??? // error

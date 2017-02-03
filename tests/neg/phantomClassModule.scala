@@ -1,4 +1,3 @@
-import dotty.phantom.PhantomAny
 
 class Boo
 object Boo

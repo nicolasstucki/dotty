@@ -1,4 +1,3 @@
-import dotty.phantom.PhantomAny
 
 object Blinky extends PhantomAny
 object Inky extends PhantomAny

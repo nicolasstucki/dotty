@@ -7,7 +7,6 @@
  * See also: ../pos/phantomEvidence-1.scala
  */
 
-import dotty.phantom.PhantomAny
 
 /** In this implementation variant of =:= (called =::=) we erase all instantiations and definitions of =::= */
 object WithNormalState {

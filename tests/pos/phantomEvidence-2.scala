@@ -1,4 +1,3 @@
-import dotty.phantom.PhantomAny
 
 /* This is a example of how to implement =:= using erasable phantom types.
  *

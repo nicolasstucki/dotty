@@ -1,4 +1,3 @@
-import dotty.phantom.PhantomAny
 
 /* Run this test with
  *   `run tests/run/phantomOnHList.scala -Xprint-diff-del -Xprint:arrayConstructors,phantomRefErasure,phantomDeclErasure,erasure`

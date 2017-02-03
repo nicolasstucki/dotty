@@ -2,7 +2,6 @@
  *   `run tests/run/phantom.scala -Xprint-diff-del -Xprint:arrayConstructors,phantomRefErasure,phantomDeclErasure,erasure`
  * to see the the diffs after PhantomRefErasure, PhantomDeclErasure and Erasure.
  */
-import dotty.phantom.PhantomAny
 
 object Test extends AbstractTypes {
 
