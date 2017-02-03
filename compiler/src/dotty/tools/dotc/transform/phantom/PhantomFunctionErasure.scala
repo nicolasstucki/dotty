@@ -67,9 +67,15 @@ class PhantomFunctionErasure extends MiniPhaseTransform with InfoTransformer {
 
         case tp: TypeRef if tp.symbol.isClass =>
           val functionName = FunctionName(tp.classSymbol)
-          if (!functionName.isFunctionName || !functionName.isPhantom) mapOver(tp)
-          else defn.FunctionType(functionName.withoutPhantoms)
+          if (functionName.isPhantom) defn.FunctionType(functionName.withoutPhantoms)
+          else mapOver(tp)
 
+        /* This fails in phantomImplicitFunctions and phantomFunctionXXL but replaces some types in phantomFunctions-4
+        case tp: TypeRef if tp.symbol.isType =>
+          val functionName = FunctionName(tp.typeSymbol.owner)
+          if (functionName.isPhantom) defn.FunctionType(functionName.withoutPhantoms).select(tp.name)
+          else mapOver(tp)
+        */
         case tp => mapOver(tp)
       }
     }

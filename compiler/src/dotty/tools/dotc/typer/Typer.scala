@@ -1997,7 +1997,7 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
             !untpd.isImplicitClosure(tree) &&
             !isApplyProto(pt) &&
             !ctx.isAfterTyper) {
-          typr.println("insert apply on implicit $tree")
+          typr.println(i"insert apply on implicit $tree")
           typed(untpd.Select(untpd.TypedSplice(tree), nme.apply), pt)
         }
         else if (ctx.mode is Mode.Pattern) {

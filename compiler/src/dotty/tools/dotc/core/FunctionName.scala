@@ -29,6 +29,8 @@ trait FunctionName {
 
   def isFunctionName: Boolean = arity != -1
 
+  override def toString(): String = s"FunctionName($name)"
+
   protected def scalaFunctionPrefix: TypeName = tpnme.scala_ ++ "$" ++ tpnme.Function
 }
 
@@ -69,6 +71,7 @@ object FunctionName {
     def isImplicit: Boolean = false
     def withoutImplicit: FunctionName = this
     def paramTypeName(i: Int)(implicit ctx: Context): TypeName = tpnme.error
+    override def toString(): String = "NotAFunctionName"
   }
 
   private class SimpleFunctionName(val arity: Int, val isImplicit: Boolean) extends FunctionName {
