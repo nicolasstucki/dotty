@@ -14,10 +14,10 @@ import dotty.tools.dotc.transform.TreeTransforms.{MiniPhaseTransform, Transforme
 import scala.annotation.tailrec
 
 /** Rewrite functions that took phantom parameters into their correspondent FunctionN */
-class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
+class PhantomFunctionErasure extends MiniPhaseTransform with InfoTransformer {
   import tpd._
 
-  override def phaseName: String = "phantomFunctions"
+  override def phaseName: String = "phantomFunctionErasure"
 
   /** List of names of phases that should precede this phase */
   override def runsAfter: Set[Class[_ <: Phase]] = Set(classOf[PhantomParamErasure])
@@ -67,7 +67,7 @@ class PhantomFunctions extends MiniPhaseTransform with InfoTransformer {
 
         case tp: TypeRef if tp.symbol.isClass =>
           val functionName = FunctionName(tp.classSymbol)
-          if (!functionName.isFunctionName || !functionName.isPhantom) tp
+          if (!functionName.isFunctionName || !functionName.isPhantom) mapOver(tp)
           else defn.FunctionType(functionName.withoutPhantoms)
 
         case tp => mapOver(tp)

@@ -9,7 +9,7 @@ import SymUtils._
 import ast.untpd
 import ast.Trees._
 import core.Phases.Phase
-import transform.phantom.PhantomFunctions
+import transform.phantom.PhantomFunctionErasure
 
 /** Expand SAM closures that cannot be represented by the JVM as lambdas to anonymous classes.
  *  These fall into five categories
@@ -28,7 +28,7 @@ class ExpandSAMs extends MiniPhaseTransform { thisTransformer =>
   import ast.tpd._
 
   /** List of names of phases that should precede this phase */
-  override def runsAfter: Set[Class[_ <: Phase]] = Set(classOf[PhantomFunctions])
+  override def runsAfter: Set[Class[_ <: Phase]] = Set(classOf[PhantomFunctionErasure])
 
   /** Is the SAMType `cls` also a SAM under the rules of the platform? */
   def isPlatformSam(cls: ClassSymbol)(implicit ctx: Context): Boolean =
