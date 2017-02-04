@@ -28,7 +28,7 @@ class ExpandSAMs extends MiniPhaseTransform { thisTransformer =>
   import ast.tpd._
 
   /** List of names of phases that should precede this phase */
-  override def runsAfter: Set[Class[_ <: Phase]] = Set(classOf[PhantomFunctionErasure])
+//  override def runsAfter: Set[Class[_ <: Phase]] = Set(classOf[PhantomFunctionErasure])
 
   /** Is the SAMType `cls` also a SAM under the rules of the platform? */
   def isPlatformSam(cls: ClassSymbol)(implicit ctx: Context): Boolean =

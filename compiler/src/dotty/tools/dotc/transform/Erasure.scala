@@ -21,12 +21,12 @@ import core.TypeErasure._
 import core.Decorators._
 import dotty.tools.dotc.ast.{Trees, tpd, untpd}
 import ast.Trees._
+
 import scala.collection.mutable.ListBuffer
-import dotty.tools.dotc.core.{Constants, Flags}
+import core.{Constants, Flags, FunctionName, Mode}
 import ValueClasses._
 import TypeUtils._
 import ExplicitOuter._
-import core.Mode
 import phantom._
 
 class Erasure extends Phase with DenotTransformer { thisTransformer =>
@@ -354,6 +354,12 @@ object Erasure extends TypeTestsCasts{
             defn.FunctionXXLClass
           else if (defn.isImplicitFunctionClass(owner))
             recur(defn.FunctionClass(owner.name.implicitFunctionArity))
+          else if (defn.isPhantomFunctionClass(owner)) {
+            recur(defn.FunctionClass(FunctionName(owner).withoutPhantoms.withoutImplicit))
+          }
+          else if (defn.isImplicitPhantomFunctionClass(owner)) {
+            recur(defn.FunctionClass(FunctionName(owner).withoutPhantoms.withoutImplicit))
+          }
           else
             owner
         recur(sym.owner)
@@ -544,8 +550,10 @@ object Erasure extends TypeTestsCasts{
      */
     override def typedClosure(tree: untpd.Closure, pt: Type)(implicit ctx: Context) = {
       val xxl = defn.isUnimplementedFunctionClass(tree.typeOpt.typeSymbol)
+      val isPhantom = defn.isPhantomFunctionClass(tree.typeOpt.typeSymbol)
       var implClosure @ Closure(_, meth, _) = super.typedClosure(tree, pt)
       if (xxl) implClosure = cpy.Closure(implClosure)(tpt = TypeTree(defn.FunctionXXLType))
+      else if (isPhantom) implClosure = cpy.Closure(implClosure)(tpt = TypeTree(defn.FunctionType(FunctionName(tree.typeOpt.typeSymbol).withoutPhantoms.withoutImplicit)))
       implClosure.tpe match {
         case SAMType(sam) =>
           val implType = meth.tpe.widen

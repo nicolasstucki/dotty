@@ -59,7 +59,7 @@ class Compiler {
            new LiftTry,             // Put try expressions that might execute on non-empty stacks into their own methods
            new ClassOf),            // Expand `Predef.classOf` calls.
       List(new PhantomParamErasure, // Erases phantom parameters and arguments
-           new PhantomFunctionErasure, // Erase PhantomsFunctionN to Function0
+           // new PhantomFunctionErasure, // Erase PhantomsFunctionN to Function0
            new ExpandSAMs),         // Expand single abstract method closures to anonymous classes
       List(new PhantomAnyErasure,   // Erases PhantomAny into ErasedPhantomAny
            new TryCatchPatterns,    // Compile cases in try/catch
