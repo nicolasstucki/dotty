@@ -132,11 +132,11 @@ class Definitions {
         val cls = denot.asClass.classSymbol
         val decls = newScope
         val phantomicity = name.phantomicity
-        def paramBounds(isPhantom: Boolean) = TypeBounds.empty // TODO
+        val arity = phantomicity.arity
         val argParams =
-          for (i <- List.range(0, phantomicity.arity)) yield
-            enterTypeParam(cls, name ++ "$T" ++ i.toString, Contravariant, decls, paramBounds(phantomicity(i))).typeRef
-        val resParam = enterTypeParam(cls, name ++ "$R", Covariant, decls, paramBounds(phantomicity.returnsPhantom)).typeRef
+          for (i <- List.range(0, arity)) yield
+            enterTypeParam(cls, name ++ "$T" ++ i.toString, Contravariant, decls, phantomicity.tParamBounds(i)).typeRef
+        val resParam = enterTypeParam(cls, name ++ "$R", Covariant, decls, phantomicity.tParamBounds(arity)).typeRef
         val (methodType, parentTraits) =
           if (name.isImplicitFunction) {
             val superTrait = FunctionType(phantomicity, isImplicit = false)

@@ -239,10 +239,10 @@ object NameOps {
      *    - N for ImplicitPhantomFunctionM where N is the length of M
      *   - (-1) otherwise
      */
-    def functionArity: Int = phantomicity.arity
+    def functionArity(implicit ctx: Context): Int = phantomicity.arity
 
     /** Checks and returns the phantomicity of the function */
-    def phantomicity: Phantomicity = {
+    def phantomicity(implicit ctx: Context): Phantomicity = {
       val arity = functionArityFor(tpnme.Function) max functionArityFor(tpnme.ImplicitFunction)
       if (arity >= 0) Phantomicity.noPhantoms(arity)
       else {
@@ -259,7 +259,7 @@ object NameOps {
      *    - ImplicitPhantomFunctionM for a valid M
      *    - false otherwise
      */
-    def isFunction: Boolean = functionArity >= 0
+    def isFunction(implicit ctx: Context): Boolean = functionArity >= 0
 
     /** Is a implicit function name
      *    - ImplicitFunctionN for N >= 0
@@ -276,7 +276,7 @@ object NameOps {
      *    - ImplicitPhantomFunctionM for a valid M
      *    - false otherwise
      */
-    def isPhantomFunction: Boolean = phantomicity.hasPhantoms
+    def isPhantomFunction(implicit ctx: Context): Boolean = phantomicity.hasPhantoms
 
     /** Is a synthetic function name
      *    - FunctionN for N > 22
@@ -285,7 +285,7 @@ object NameOps {
      *    - ImplicitPhantomFunctionM for a valid M
      *    - false otherwise
      */
-    def isSyntheticFunction: Boolean = {
+    def isSyntheticFunction(implicit ctx: Context): Boolean = {
       val p = phantomicity
       if (name.startsWith(tpnme.Function)) p.arity > MaxImplementedFunctionArity
       else p.isValid
