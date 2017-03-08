@@ -8,14 +8,20 @@ object Test {
   import Boo._
 
   def main(args: Array[String]): Unit = {
-    foo
-    foo
-    foo = {
+    val f = new Foo
+    f.foo
+    f.foo
+    f.foo = {
       println("foo3")
       any
     }
-    foo
+    f.foo
+    assert(!f.getClass.getDeclaredFields.exists(_.getName.startsWith("foo")), "field foo not erased")
   }
+}
+
+class Foo {
+  import Boo._
 
   var foo = {
     println("foo")

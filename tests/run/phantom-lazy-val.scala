@@ -5,20 +5,27 @@
  */
 
 object Test {
-  import Boo._
 
   def main(args: Array[String]): Unit = {
+    val f = new Foo
     println(1)
-    foo
+    f.foo
     println(2)
-    foo
+    f.foo
+    // Currently not erasing fields for lazy phantom vals
+    // assert(!f.getClass.getDeclaredFields.exists(_.getName.startsWith("foo")), "field foo not erased")
   }
+
+
+}
+
+class Foo {
+  import Boo._
 
   lazy val foo = {
     println("foo")
     any
   }
-
 }
 
 object Boo extends Phantom {
