@@ -64,6 +64,7 @@ public enum ErrorMessageID {
     MatchOnPhantomID,
     IfElsePhantomID,
     PhantomIsInObjectID,
+    PhantomObjectIsInPackageOrObjectID,
     ;
 
     public int errorNumber() {

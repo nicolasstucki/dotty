@@ -1299,4 +1299,12 @@ object messages {
     val explanation =
       hl"""|""".stripMargin
   }
+
+  case class PhantomObjectIsInPackageOrObject()(implicit ctx: Context) extends Message(PhantomObjectIsInPackageOrObjectID) {
+    val kind = "Phantom restriction"
+    val msg = s"An ${"object"} extending ${"scala.Phantom"} must be a top level ${"object"} or in another object"
+
+    val explanation =
+      hl"""|""".stripMargin
+  }
 }
