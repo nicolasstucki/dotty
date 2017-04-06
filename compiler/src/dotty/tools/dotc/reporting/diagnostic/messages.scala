@@ -1267,9 +1267,9 @@ object messages {
       hl"""|""".stripMargin
   }
 
-  case class MatchPhantom()(implicit ctx: Context) extends Message(MatchPhantomID) {
+  case class MatchPhantom(tpdCase: tpd.CaseDef, expected: Type)(implicit ctx: Context) extends Message(MatchPhantomID) {
     val kind = "Phantom restriction"
-    val msg = "Pattern matches cannot return phantom and non phantoms"
+    val msg = s"Pattern expected case to return a ${expected.show} but was ${tpdCase.tpe.show}"
 
     val explanation =
       hl"""|""".stripMargin
@@ -1284,9 +1284,13 @@ object messages {
       hl"""|""".stripMargin
   }
 
-  case class IfElsePhantom()(implicit ctx: Context) extends Message(IfElsePhantomID) {
+  case class IfElsePhantom(thenp: tpd.Tree, elsep: tpd.Tree)(implicit ctx: Context) extends Message(IfElsePhantomID) {
     val kind = "Phantom restriction"
-    val msg = "Cannot yield a phantom type in one of the if branches and not in the other one."
+    val msg =
+      s"""if/else cannot have branches with types in different lattices:
+         |  ${thenp.tpe.show} of lattice ${thenp.tpe.topType.show}
+         |  ${elsep.tpe.show} of lattice ${elsep.tpe.topType.show}
+       """.stripMargin
 
     val explanation =
       hl"""|""".stripMargin
