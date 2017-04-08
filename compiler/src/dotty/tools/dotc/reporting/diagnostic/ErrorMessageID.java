@@ -56,15 +56,6 @@ public enum ErrorMessageID {
     CyclicReferenceInvolvingID,
     CyclicReferenceInvolvingImplicitID,
     SuperQualMustBeParentID,
-    ErasedPhantomsSignatureCollisionID,
-    PhantomInheritanceID,
-    PhantomMixedBoundsID,
-    PhantomCrossedMixedBoundsID,
-    MatchPhantomID,
-    MatchOnPhantomID,
-    IfElsePhantomID,
-    PhantomIsInObjectID,
-    PhantomObjectIsInPackageOrObjectID,
     ;
 
     public int errorNumber() {
