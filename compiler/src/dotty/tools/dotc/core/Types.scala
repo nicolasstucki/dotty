@@ -205,7 +205,7 @@ object Types {
       *   - XYZ if XYZ extends scala.Phantom and this type is upper bounded XYZ.Any
       *   - NoType otherwise
       */
-    final def phantomLatticeType(implicit ctx: Context): Type = widen match {
+    private final def phantomLatticeType(implicit ctx: Context): Type = widen match {
       case tp: ClassInfo if defn.isPhantomTerminalClass(tp.classSymbol) => tp.prefix
       case tp: TypeProxy if tp.superType ne this => tp.underlying.phantomLatticeType
       case tp: AndOrType => tp.tp1.phantomLatticeType

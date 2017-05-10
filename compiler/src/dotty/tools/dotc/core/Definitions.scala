@@ -115,14 +115,15 @@ class Definitions {
         val decls = newScope
         val arity = name.functionArity
         val top = lattice.thisType.select(tpnme.Any)
+        val bottom = lattice.thisType.select(tpnme.Nothing)
         val argParams =
           for (i <- List.range(0, arity)) yield
-            enterTypeParam(cls, name ++ "$T" ++ i.toString, Contravariant, decls, TypeBounds(top.bottomType, top)).typeRef
+            enterTypeParam(cls, name ++ "$T" ++ i.toString, Contravariant, decls, TypeBounds(bottom, top)).typeRef
         val resParam = enterTypeParam(cls, name ++ "$R", Covariant, decls, TypeBounds.empty).typeRef
         val (methodType, parentTraits) =
           if (name.firstPart.startsWith(str.ImplicitFunction)) {
             val superTrait =
-              FunctionType(top, arity, isImplicit = false).appliedTo(argParams ::: resParam :: Nil)
+              FunctionType(arity, isImplicit = false, top).appliedTo(argParams ::: resParam :: Nil)
             (ImplicitMethodType, ctx.normalizeToClassRefs(superTrait :: Nil, cls, decls))
           }
           else (MethodType, Nil)
@@ -709,27 +710,24 @@ class Definitions {
     lazy val Function0_applyR = ImplementedFunctionType(0).symbol.requiredMethodRef(nme.apply)
     def Function0_apply(implicit ctx: Context) = Function0_applyR.symbol
 
-  def FunctionType(args: List[Type], resultType: Type, isImplicit: Boolean)(implicit ctx: Context): TypeRef = {
-    // TODO: check that all args are in the same lattice
-    if (args.nonEmpty && args.forall(_.isPhantom)) {
-      FunctionType(args.head.topType, args.length, isImplicit)
-    } else {
-      FunctionType(args.length, isImplicit)
-    }
-  }
-
-  def FunctionType(top: Type, arity: Int, isImplicit: Boolean)(implicit ctx: Context): TypeRef = {
+  def FunctionType(n: Int, isImplicit: Boolean = false, top: Type = AnyType)(implicit ctx: Context): TypeRef = {
     if (top.isPhantom) {
-      val funName = (if (isImplicit) str.ImplicitFunction else str.Function) + arity
+      val funName = (if (isImplicit) str.ImplicitFunction else str.Function) + n
       top.normalizedPrefix.select(funName.toTypeName).asInstanceOf[TypeRef]
-    } else {
-      FunctionType(arity, isImplicit)
     }
+    else if (n <= MaxImplementedFunctionArity && (!isImplicit || ctx.erasedTypes)) ImplementedFunctionType(n)
+    else FunctionClass(n, isImplicit).typeRef
   }
 
-  def FunctionType(n: Int, isImplicit: Boolean = false)(implicit ctx: Context): TypeRef =
-    if (n <= MaxImplementedFunctionArity && (!isImplicit || ctx.erasedTypes)) ImplementedFunctionType(n)
-    else FunctionClass(n, isImplicit).typeRef
+  def FunctionType(args: List[Type], resultType: Type, isImplicit: Boolean)(implicit ctx: Context): TypeRef =
+    FunctionType(args.length, isImplicit, topInSameUniverse(args, "function arguments."))
+
+  private def topInSameUniverse(types: List[Type], relationship: => String)(implicit ctx: Context): Type = {
+    types match {
+      case first :: rest => (first /: rest)(inSameUniverse((t1, _) => t1.topType, _, _, relationship, ctx.owner.pos))
+      case Nil => defn.AnyType
+    }
+  }
 
   private lazy val TupleTypes: Set[TypeRef] = TupleType.toSet
 
@@ -883,7 +881,7 @@ class Definitions {
     def top =
       if (!sym.owner.derivesFrom(defn.PhantomClass)) defn.AnyType
       else sym.owner.thisType.select(tpnme.Any)
-    def funType = FunctionType(top, arity, sym.name.isImplicitFunction)
+    def funType = FunctionType(arity, sym.name.isImplicitFunction, top)
     arity >= 0 && isFunctionClass(sym) && tp.isRef(funType.typeSymbol)
   }
 
@@ -1019,5 +1017,17 @@ class Definitions {
 
   /** If the symbol is of the class scala.Phantom.Any or scala.Phantom.Nothing */
   def isPhantomTerminalClass(sym: Symbol) = (sym eq Phantom_AnyClass) || (sym eq Phantom_NothingClass)
+
+  /** Ensure that `tp2`' is in the same universe as `tp1`. If that's the case, return
+   *  `op` applied to both types.
+   *  If not, issue an error and return `tp1`'.
+   */
+  def inSameUniverse(op: (Type, Type) => Type, tp1: Type, tp2: Type, relationship: => String, pos: Position)(implicit ctx: Context): Type =
+    if (tp1.topType == tp2.topType)
+      op(tp1, tp2)
+    else {
+      ctx.error(ex"$tp1 and $tp2 are in different universes. They cannot be combined in $relationship", pos)
+      tp1
+    }
 
 }
