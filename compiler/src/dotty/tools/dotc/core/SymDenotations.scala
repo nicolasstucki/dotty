@@ -332,6 +332,13 @@ object SymDenotations {
       case Nil => Nil
     }
 
+    /** Has @CannotCapture annotation */
+    def cannotCapture(implicit ctx: Context): Boolean = hasAnnotation(defn.CannotCaptureAnnot)
+
+    /** Has @CannotBeCaptured annotation */
+    def cannotBeCaptured(implicit ctx: Context): Boolean =
+      (symbol ne defn.ScalaPackageClass) && hasAnnotation(defn.CannotBeCapturedAnnot)
+
     /** The denotation is completed: info is not a lazy type and attributes have defined values */
     final def isCompleted: Boolean = !myInfo.isInstanceOf[LazyType]
 

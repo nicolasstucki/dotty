@@ -49,8 +49,10 @@ class Compiler {
       List(new Pickler),            // Generate TASTY info
       List(new FirstTransform,      // Some transformations to put trees into a canonical form
            new CheckReentrant,      // Internal use only: Check that compiled program has no data races involving global vars
-           new ElimJavaPackages),   // Eliminate syntactic references to Java packages
-      List(new CheckStatic,         // Check restrictions that apply to @static members
+           new ElimJavaPackages,   // Eliminate syntactic references to Java packages
+           new PropagateCannotCapture),
+      List(new CheckCaptures,
+           new CheckStatic,         // Check restrictions that apply to @static members
            new CheckPhantomCast,    // Checks that no Phantom types in are in casts
            new ElimRepeated,        // Rewrite vararg parameters and arguments
            new RefChecks,           // Various checks mostly related to abstract members and overriding

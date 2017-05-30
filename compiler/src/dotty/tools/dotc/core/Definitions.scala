@@ -592,6 +592,10 @@ class Definitions {
   def AnnotationDefaultAnnot(implicit ctx: Context) = AnnotationDefaultAnnotType.symbol.asClass
   lazy val BodyAnnotType = ctx.requiredClassRef("scala.annotation.internal.Body")
   def BodyAnnot(implicit ctx: Context) = BodyAnnotType.symbol.asClass
+  lazy val CannotBeCapturedAnnotType = ctx.requiredClassRef("scala.annotation.CannotBeCaptured")
+  def CannotBeCapturedAnnot(implicit ctx: Context) = CannotBeCapturedAnnotType.symbol.asClass
+  lazy val CannotCaptureAnnotType = ctx.requiredClassRef("scala.annotation.CannotCapture")
+  def CannotCaptureAnnot(implicit ctx: Context) = CannotCaptureAnnotType.symbol.asClass
   lazy val ChildAnnotType = ctx.requiredClassRef("scala.annotation.internal.Child")
   def ChildAnnot(implicit ctx: Context) = ChildAnnotType.symbol.asClass
   lazy val CovariantBetweenAnnotType = ctx.requiredClassRef("scala.annotation.internal.CovariantBetween")
