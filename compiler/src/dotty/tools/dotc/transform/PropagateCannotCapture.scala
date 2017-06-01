@@ -15,7 +15,7 @@ class PropagateCannotCapture extends MiniPhaseTransform {
   def phaseName = "propagateCannotCapture"
 
   override def transformClosure(tree: tpd.Closure)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
-    tree.tpt.tpe.member(nme.apply).symbol.getAnnotation(defn.CannotCaptureAnnot) match {
+    tree.tpe.member(nme.apply).symbol.getAnnotation(defn.CannotCaptureAnnot) match {
       case Some(annotation) => tree.meth.symbol.addAnnotation(annotation)
       case None =>
     }

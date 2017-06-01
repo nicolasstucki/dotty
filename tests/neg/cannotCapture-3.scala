@@ -1,5 +1,5 @@
 import scala.annotation.{CannotBeCaptured, CannotCapture}
-import Boo._
+import Boo.{boo, BooAny}
 
 object Foo {
 

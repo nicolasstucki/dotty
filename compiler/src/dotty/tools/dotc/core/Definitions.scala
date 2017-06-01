@@ -128,7 +128,10 @@ class Definitions {
             (ImplicitMethodType, ctx.normalizeToClassRefs(superTrait :: Nil, cls, decls))
           }
           else (MethodType, Nil)
-        decls.enter(newMethod(cls, nme.apply, methodType(argParams, resParam), Deferred))
+        val applyMethod =
+          decls.enter(newMethod(cls, nme.apply, methodType(argParams, resParam), Deferred))
+        if (top.isPhantom)
+          applyMethod.addAnnotation(Annotations.Annotation(CannotCaptureAnnot))
         denot.info = ClassInfo(lattice.thisType, cls, ObjectType :: parentTraits, decls)
       }
     }
