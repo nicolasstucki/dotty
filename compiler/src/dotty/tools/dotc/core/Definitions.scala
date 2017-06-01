@@ -772,6 +772,7 @@ class Definitions {
 
   private def topInSameUniverse(types: List[Type], relationship: => String)(implicit ctx: Context): Type = {
     types match {
+      case first :: Nil => first.topType
       case first :: rest => (first /: rest)(inSameUniverse((t1, _) => t1.topType, _, _, relationship, ctx.owner.pos))
       case Nil => defn.AnyType
     }
