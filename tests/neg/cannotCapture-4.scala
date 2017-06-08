@@ -1,12 +1,11 @@
 import scala.annotation.{CannotBeCaptured, CannotCapture}
-import Boo.{CanCall, Evidence, canCall, canCall2, pure, Pure, CanDo, canDo, ev2, ev2_1, ev2_2, Ev2}
+import Boo._
 
 object Foo {
 
   type requiring[R, P1 <: Evidence] = Boo.ImplicitFunction1[P1, R]
-  type and[P1 <: Evidence, P2 <: Evidence] = Ev2[P1, P2]
+  type and[P1 <: EfectEvidence, P2 <: EfectEvidence] = PackedEvindence[P1, P2]
   type pure[R] = requiring[R, Pure]
-
 
 
   def ff1(n: Int): pure[Unit] = {
@@ -29,11 +28,11 @@ object Foo {
     ff2(3)
   }
 
-// Fails before the other ones
-//  def ff3(a: Int requiring CanCall): Int = {
-//    a // err
-//  }
-
+//// Fails before the other ones
+////  def ff3(a: Int requiring CanCall): Int = {
+////    a // err
+////  }
+//
   def ff4(a: Int requiring CanCall): Int requiring CanCall = {
     a
   }
@@ -55,8 +54,20 @@ object Foo {
     a
   }
 
-  def ff7(a: Int requiring (CanCall and CanDo)): Int requiring (CanCall and CanDo) = {
+  def ff8(a: Int requiring (CanCall and CanDo)): Int requiring (CanCall and CanDo) = {
     a
+  }
+
+  def ff9(a: => Int requiring (CanCall and CanDo)): Int requiring (CanCall and CanDo) = {
+    a
+  }
+
+  def ff10(a: Int requiring CanCall): Int requiring (CanCall and CanDo) = {
+    a // error // FIXME ev2_1 gets captured
+  }
+
+  def ff11(a: Int requiring CanDo): Int requiring (CanCall and CanDo) = {
+    a // error // FIXME ev2_2 gets captured
   }
 
 }
@@ -64,20 +75,27 @@ object Foo {
 
 @CannotBeCaptured
 object Boo extends Phantom {
-  type Evidence <: this.Any
-  type Pure = Evidence
-  type CanCall <: Evidence
-  type CanDo <: Evidence
-  type Ev2[E1 <: Evidence, E2 <: Evidence] <: Evidence
 
-  implicit def pure: Evidence = assume
+  type Evidence <: this.Any
+
+  type EfectEvidence <: Evidence
+
+  type Pure = EfectEvidence
+
+  type CanCall <: EfectEvidence
+  type CanDo <: EfectEvidence
+
+
+  implicit def pure: Pure = assume
   def canCall: CanCall = assume
   def canCall2(): CanCall = assume
   def canDo: CanDo= assume
 
-  implicit def ev2[E1 <: Evidence, E2 <: Evidence](implicit e1: E1, e2: E2): Ev2[E1, E2] = assume
-  implicit def ev2_1[E1 <: Evidence, E2 <: Evidence](implicit ev: Ev2[E1, E2]): E1 = assume
-  implicit def ev2_2[E1 <: Evidence, E2 <: Evidence](implicit ev: Ev2[E1, E2]): E2 = assume
+  type PackedEvindence[E1 <: Evidence, E2 <: Evidence] <: Evidence
+  implicit def ev2[E1 <: Evidence, E2 <: Evidence](implicit e1: E1, e2: E2): PackedEvindence[E1, E2] = assume
 
+  /* ev2_1 and ev2_2 get captured at unboxing site. Could allow them as special case. */
+  implicit def ev2_1[E1 <: Evidence, E2 <: Evidence](implicit ev: PackedEvindence[E1, E2]): E1 = assume
+  implicit def ev2_2[E1 <: Evidence, E2 <: Evidence](implicit ev: PackedEvindence[E1, E2]): E2 = assume
 
 }
