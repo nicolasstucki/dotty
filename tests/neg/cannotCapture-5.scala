@@ -1,9 +1,9 @@
 import scala.annotation.{CannotBeCaptured, CannotCapture}
-import Boo._
+import Capabilities._
 
 object Foo {
 
-  type requiring[R, P1 <: Evidence] = Boo.ImplicitFunction1[P1, R]
+  type requiring[R, P1 <: Evidence] = Capabilities.ImplicitFunction1[P1, R]
   type pure[R] = requiring[R, Evidence]
 
   def map[E <: Evidence](n: Int, f: Int => Int requiring E): Int requiring E = {
@@ -11,7 +11,7 @@ object Foo {
   }
 
   def pureMap(n: Int, f: Int => pure[Int]): pure[Int] = {
-    f(n)
+    map[Pure](n, f) // FIXME #2671: inferes Boo.Nothing
   }
 
   pureMap(4, n => {
@@ -20,7 +20,7 @@ object Foo {
 
   {
     val f: Int => pure[Int] = n => 3
-    map[Pure](5, f) // FIXME: inferes Boo.Nothing
+    map[Pure](5, f) // FIXME #2671: inferes Boo.Nothing
   }
 
   {
@@ -31,13 +31,13 @@ object Foo {
 
   {
     val f: Int => Int requiring CanCall = n => 6
-    map(7, f) // error
+    map(7, f) // error: implicit for CanCall not found
   }
 }
 
 
 @CannotBeCaptured
-object Boo extends Phantom {
+object Capabilities extends Phantom {
   type Evidence <: this.Any
   type Pure = Evidence
   type CanCall <: Evidence

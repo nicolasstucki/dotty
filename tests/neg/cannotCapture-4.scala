@@ -1,10 +1,10 @@
 import scala.annotation.{CannotBeCaptured, CannotCapture}
-import Boo._
+import Capabilities._
 
 object Foo {
 
-  type requiring[R, P1 <: Evidence] = Boo.ImplicitFunction1[P1, R]
-  type and[P1 <: EfectEvidence, P2 <: EfectEvidence] = PackedEvindence[P1, P2]
+  type requiring[R, P1 <: Evidence] = Capabilities.ImplicitFunction1[P1, R]
+  type and[P1 <: EffectEvidence, P2 <: EffectEvidence] = PackedEvindence[P1, P2]
   type pure[R] = requiring[R, Pure]
 
 
@@ -74,16 +74,16 @@ object Foo {
 
 
 @CannotBeCaptured
-object Boo extends Phantom {
+object Capabilities extends Phantom {
 
   type Evidence <: this.Any
 
-  type EfectEvidence <: Evidence
+  type EffectEvidence <: Evidence
 
-  type Pure = EfectEvidence
+  type Pure = EffectEvidence
 
-  type CanCall <: EfectEvidence
-  type CanDo <: EfectEvidence
+  type CanCall <: EffectEvidence
+  type CanDo <: EffectEvidence
 
 
   implicit def pure: Pure = assume
