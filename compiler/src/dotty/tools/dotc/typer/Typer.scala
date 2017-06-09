@@ -697,9 +697,9 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
         case _ => false
       }
       val argsTypes = args.map(tr => typed(tr).tpe)
-      val funCls = defn.FunctionType(argsTypes, typed(body).tpe, isImplicit)
+      val funType = defn.FunctionType(argsTypes, typed(body).tpe, isImplicit)
       typed(cpy.AppliedTypeTree(tree)(
-        untpd.TypeTree(funCls.typeRef), args :+ body), pt)
+        untpd.TypeTree(funType), args :+ body), pt)
     }
     else {
       val params = args.asInstanceOf[List[untpd.ValDef]]

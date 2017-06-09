@@ -419,6 +419,7 @@ object Erasure extends TypeTestsCasts{
 
     override def typedIdent(tree: untpd.Ident, pt: Type)(implicit ctx: Context): tpd.Tree =
       if (tree.symbol eq defn.Phantom_assume) PhantomErasure.erasedAssume
+      else if (tree.symbol.is(Flags.Param) && wasPhantom(tree.typeOpt)) PhantomErasure.erasedParameterRef
       else super.typedIdent(tree, pt)
 
     override def typedThis(tree: untpd.This)(implicit ctx: Context): Tree =
@@ -490,10 +491,6 @@ object Erasure extends TypeTestsCasts{
     override def typedSeqLiteral(tree: untpd.SeqLiteral, pt: Type)(implicit ctx: Context) =
       super.typedSeqLiteral(tree, erasure(tree.typeOpt))
         // proto type of typed seq literal is original type;
-
-    override def typedIdent(tree: untpd.Ident, pt: Type)(implicit ctx: Context) =
-      if (tree.symbol.is(Flags.Param) && wasPhantom(tree.typeOpt)) PhantomErasure.erasedParameterRef
-      else super.typedIdent(tree, pt)
 
     override def typedIf(tree: untpd.If, pt: Type)(implicit ctx: Context) =
       super.typedIf(tree, adaptProto(tree, pt))
