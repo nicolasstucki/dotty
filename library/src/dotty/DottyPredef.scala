@@ -38,4 +38,10 @@ object DottyPredef {
   final def assertFail(): Unit = throw new java.lang.AssertionError("assertion failed")
   final def assertFail(message: => Any): Unit = throw new java.lang.AssertionError("assertion failed: " + message)
 
+  type Specialized[T] = dotty.Specialized[T]
+
+  implicit def $specialized[T]: Specialized[T] = new Specialized[T]
+
 }
+
+final class Specialized[T] // TODO move me

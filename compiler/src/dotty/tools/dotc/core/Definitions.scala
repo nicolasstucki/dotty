@@ -1081,4 +1081,7 @@ class Definitions {
 
   def ErasedPhantom_UNIT(implicit ctx: Context) = ErasedPhantomClass.linkedClass.requiredValue("UNIT")
 
+  lazy val SpecializedType: TypeRef = ctx.requiredClassRef("dotty.Specialized")
+  def SpecializedClass(implicit ctx: Context) = SpecializedType.symbol.asClass
+
 }
