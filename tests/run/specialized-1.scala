@@ -20,6 +20,8 @@ object Test {
     checkTrace(foo10(new Object), List("foo10", "throws$spec"))
     foo11(1)
     checkTrace(foo12(new VC(1)), List("foo12$spec", "throws2$spec"))
+    checkTrace(foo13(new A), List("foo13", "foo$spec", "throws$spec"))
+//    checkTrace(foo13(new B), List("foo13", "foo$spec", "throws2$spec")) // FIXME: B.foo13 not getting specialized
   }
 
   def foo1[T: Specialized]() = {
@@ -93,6 +95,11 @@ object Test {
     def foo(): Int = x
   }
 
+  def foo13[T](a: A) = {
+    a.foo(1)
+  }
+
+
   def throws[U: Specialized](x: U): Unit = throw new StackCheck
 
   def throws2[U: Specialized](x: U): Unit = throw new StackCheck
@@ -108,4 +115,12 @@ object Test {
         assert(trace == expectedTrace, s"expected $expectedTrace but was $trace")
     }
   }
+}
+
+class A {
+  def foo[T: Specialized](x: T) = Test.throws(x)
+}
+
+class B extends A {
+  override def foo[T: Specialized](x: T) = Test.throws2(x)
 }

@@ -30,7 +30,14 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     lazy val specBounds = specializedBounds(sym, targs)
     if (!isSpecilizable(sym)) tree
     else if (specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
-    else ref(specializedMethod(sym, specBounds)).appliedToTypes(targs)
+    else {
+      val specSym = specializedMethod(sym, specBounds)
+      val specFun = tree.fun match {
+        case Select(qual, _) => qual.select(specSym)
+        case _ => ref(specSym)
+      }
+      specFun.appliedToTypes(targs)
+    }
   }
 
   private def isSpecilizable(sym: Symbol)(implicit ctx: Context): Boolean = {
@@ -54,6 +61,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       specSymbols.put(key, specSym)
       val specDefDef = createSpecializedDefDef(getDefDefOf(sym), specSym)
       specDefDefs.put(sym, specDefDef :: specDefDefs.getOrElse(sym, Nil))
+      // FIXME: specialize overriding symbols (collect them in Specialize0)
       specSym
     }
     specSymbols.get(key) match {
@@ -115,11 +123,10 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       }
 
       // Transform references to terms
-      def vparamssSyms(vparamss: List[List[Tree]]): List[Symbol] = vparamss.flatten.map(_.symbol)
-      val transformVparams: Map[Symbol, Symbol] = (vparamssSyms(ddef.vparamss) zip vparamssSyms(vparamss)).toMap
+      val transformVparams: Map[Symbol, Tree] = (ddef.vparamss.flatten.map(_.symbol) zip vparamss.flatten).toMap
       def treeMap(tree: Tree): Tree = tree match {
         case tree: Ident if tree.symbol.isTerm && tree.symbol.is(Param) && tree.symbol.owner == oldSym =>
-          ref(transformVparams(tree.symbol))
+          transformVparams(tree.symbol)
         case Return(expr, from) if from.symbol == oldSym => Return(expr, ref(specSym))
         case _ => tree
       }
