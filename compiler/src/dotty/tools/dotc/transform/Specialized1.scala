@@ -140,7 +140,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
           // TODO: other patterns?
           case _ => true
         }
-        Match(sel, newCases)
+        cpy.Match(tree)(sel, newCases)
       case _ => tree
     }
     val transformInnerCalls = new TreeTypeMap(treeMap = treeMap)
