@@ -15,6 +15,9 @@ object Test {
         checkTrace(foo8(1), List("foo8$spec", "foo8_2$2", "throws$spec"))
     }
     checkTrace(foo9(1, false), List("foo9$spec", "throws$spec"))
+    checkTrace(foo10(1), List("foo10$spec", "throws$spec"))
+    checkTrace(foo10("abc"), List("foo10", "throws"))
+    checkTrace(foo10(new Object), List("foo10", "throws$spec"))
 
   }
 
@@ -63,6 +66,14 @@ object Test {
     if (b) return x
     else throws(x)
     x
+  }
+
+  def foo10[T: Specialized](x: T): Unit = {
+    x match {
+      case x: Int => throws(x)
+      case x: String => throws(x)
+      case x => throws(x.hashCode)
+    }
   }
 
   def throws[U: Specialized](x: U): Unit = throw new StackCheck

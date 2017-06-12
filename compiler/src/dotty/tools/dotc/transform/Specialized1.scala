@@ -117,9 +117,10 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       def vparamssSyms(vparamss: List[List[Tree]]): List[Symbol] = vparamss.flatten.map(_.symbol)
       val transformVparams: Map[Symbol, Symbol] = (vparamssSyms(ddef.vparamss) zip vparamssSyms(vparamss)).toMap
       def treeMap(tree: Tree): Tree = tree match {
-        case t: Ident if t.symbol.is(Param) && t.symbol.owner == oldSym => ref(transformVparams(t.symbol))
-        case Return(t, from) if from.symbol == oldSym => Return(t, ref(specSym))
-        case t => t
+        case tree: Ident if tree.symbol.isTerm && tree.symbol.is(Param) && tree.symbol.owner == oldSym =>
+          ref(transformVparams(tree.symbol))
+        case Return(expr, from) if from.symbol == oldSym => Return(expr, ref(specSym))
+        case _ => tree
       }
 
       // Apply transforms
@@ -127,12 +128,19 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       treeTypeMap.transform(ddef.rhs)
     }
 
-    transformInnerCalls(polyDefDef(specSym.asTerm, rhsFn))
+    transformBody(polyDefDef(specSym.asTerm, rhsFn))
   }
 
-  private def transformInnerCalls(specDefDef: DefDef)(implicit ctx: Context): DefDef = {
+  private def transformBody(specDefDef: DefDef)(implicit ctx: Context): DefDef = {
     def treeMap(tree: Tree): Tree = tree match {
       case tree: TypeApply => specializedTypeApply(tree)
+      case Match(sel, cases) =>
+        val newCases = cases.filter {
+          case CaseDef(Bind(_, Typed(_, tp)), _, _) => sel.tpe <:< tp.tpe
+          // TODO: other patterns?
+          case _ => true
+        }
+        Match(sel, newCases)
       case _ => tree
     }
     val transformInnerCalls = new TreeTypeMap(treeMap = treeMap)
