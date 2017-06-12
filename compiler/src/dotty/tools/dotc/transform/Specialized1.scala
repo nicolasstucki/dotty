@@ -128,12 +128,11 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       treeTypeMap.transform(ddef.rhs)
     }
 
-    transformBody(polyDefDef(specSym.asTerm, rhsFn))
+    transformSpecializedBody(polyDefDef(specSym.asTerm, rhsFn))
   }
 
-  private def transformBody(specDefDef: DefDef)(implicit ctx: Context): DefDef = {
+  private def transformSpecializedBody(specDefDef: DefDef)(implicit ctx: Context): DefDef = {
     def treeMap(tree: Tree): Tree = tree match {
-      case tree: TypeApply => specializedTypeApply(tree)
       case Match(sel, cases) =>
         val newCases = cases.filter {
           case CaseDef(Bind(_, Typed(_, tp)), _, _) => sel.tpe <:< tp.tpe
@@ -141,6 +140,15 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
           case _ => true
         }
         cpy.Match(tree)(sel, newCases)
+      case tree @ TypeApply(fun, args) =>
+        fun match {
+          case Select(qual, _) if fun.symbol == defn.Any_isInstanceOf =>
+            if (qual.tpe <:< args.head.tpe) Literal(Constants.Constant(true))
+            else if (!(args.head.tpe <:< qual.tpe)) Literal(Constants.Constant(false))
+            else tree
+          case _ =>
+            specializedTypeApply(tree)
+        }
       case _ => tree
     }
     val transformInnerCalls = new TreeTypeMap(treeMap = treeMap)

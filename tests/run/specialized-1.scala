@@ -18,7 +18,7 @@ object Test {
     checkTrace(foo10(1), List("foo10$spec", "throws$spec"))
     checkTrace(foo10("abc"), List("foo10", "throws"))
     checkTrace(foo10(new Object), List("foo10", "throws$spec"))
-
+    foo11(1)
   }
 
   def foo1[T: Specialized]() = {
@@ -74,6 +74,14 @@ object Test {
       case x: String => throws(x)
       case x => throws(x.hashCode)
     }
+  }
+
+  def foo11[T: Specialized](x: T): Unit = {
+    assert(x.isInstanceOf[Int])
+    assert(!x.isInstanceOf[String])
+    assert(x.isInstanceOf[T])
+    x.asInstanceOf[Int]
+    x.asInstanceOf[T]
   }
 
   def throws[U: Specialized](x: U): Unit = throw new StackCheck
