@@ -18,6 +18,7 @@ class Specialized2 extends MiniPhaseTransform with InfoTransformer { thisTransfo
 
   override def transformDefDef(tree: tpd.DefDef)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
     val specializations = ctx.phaseOfClass(classOf[Specialized1]).asInstanceOf[Specialized1].specDefDefs
+    // TODO: Add specialization in the class transform
     val specTrees = specializations.getOrElse(tree.symbol, Nil)
     if (specTrees.isEmpty) tree
     else Thicket(tree :: specTrees)
