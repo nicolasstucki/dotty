@@ -19,6 +19,7 @@ object Test {
     checkTrace(foo10("abc"), List("foo10", "throws"))
     checkTrace(foo10(new Object), List("foo10", "throws$spec"))
     foo11(1)
+    checkTrace(foo12(new VC(1)), List("foo12$spec", "throws2$spec"))
   }
 
   def foo1[T: Specialized]() = {
@@ -84,7 +85,17 @@ object Test {
     x.asInstanceOf[T]
   }
 
+  def foo12[T: Specialized](x: T): Unit = {
+    throws2(x)
+  }
+
+  class VC(x: Int) extends AnyVal {
+    def foo(): Int = x
+  }
+
   def throws[U: Specialized](x: U): Unit = throw new StackCheck
+
+  def throws2[U: Specialized](x: U): Unit = throw new StackCheck
 
   class StackCheck extends Throwable
 

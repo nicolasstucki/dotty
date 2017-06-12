@@ -97,7 +97,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     tpe =:= defn.ByteType ||
     tpe =:= defn.DoubleType ||
     tpe =:= defn.FloatType ||
-    tpe =:= defn.UnitType
+    tpe =:= defn.UnitType ||
+    tpe.widenDealias.classSymbol.isValueClass
   }
 
   private def createSpecializedDefDef(ddef: DefDef, specSym: Symbol)(implicit ctx: Context) = {
