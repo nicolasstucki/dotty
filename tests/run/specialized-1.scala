@@ -8,6 +8,14 @@ object Test {
     checkTrace(foo5(1, 0.2), List("foo5$spec", "throws"))
     checkTrace(foo6(1, true), List("foo6$spec", "throws$spec"))
     checkTrace(foo7(1, true), List("foo7$spec", "foo7$spec", "throws$spec"))
+    try { // non-determinism on the names of inner function mangling
+      checkTrace(foo8(1), List("foo8$spec", "foo8_2$1", "throws$spec"))
+    } catch {
+      case _: AssertionError =>
+        checkTrace(foo8(1), List("foo8$spec", "foo8_2$2", "throws$spec"))
+    }
+    checkTrace(foo9(1, false), List("foo9$spec", "throws$spec"))
+
   }
 
   def foo1[T: Specialized]() = {
@@ -43,6 +51,18 @@ object Test {
       foo7(x, false) // non-tailrec and specialized
       foo7(x, false)
     } else throws(x)
+  }
+
+  def foo8[T: Specialized](x: T): T = {
+    def foo8_2() = throws(x)
+    foo8_2()
+    x
+  }
+
+  def foo9[T: Specialized](x: T, b: Boolean): T = {
+    if (b) return x
+    else throws(x)
+    x
   }
 
   def throws[U: Specialized](x: U): Unit = throw new StackCheck

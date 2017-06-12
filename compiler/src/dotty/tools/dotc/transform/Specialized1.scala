@@ -103,19 +103,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private def createSpecializedDefDef(ddef: DefDef, specSym: Symbol)(implicit ctx: Context) = {
     val oldSym = ddef.symbol
     def rhsFn(tparams: List[Type])(vparamss: List[List[Tree]]) = {
-      val transformTparams: Map[Symbol, Type] =
-        ddef.tparams.map(_.symbol).zip(tparams).toMap
-
-      def vparamssSyms(vparamss: List[List[Tree]]): List[Symbol] = vparamss.flatten.map(_.symbol)
-      val transformVparams: Map[Symbol, Symbol] =
-        (vparamssSyms(ddef.vparamss) zip vparamssSyms(vparamss)).toMap
-
-      def treeMap(tree: Tree): Tree = tree match {
-        case t: Ident if t.symbol.is(Param) && t.symbol.owner == oldSym => ref(transformVparams(t.symbol))
-        case Return(t, from) if from.symbol == oldSym => Return(t, ref(specSym))
-        case t => t
-      }
-
+      // Transform references to types
+      lazy val transformTparams: Map[Symbol, Type] = ddef.tparams.map(_.symbol).zip(tparams).toMap
       val typeMap = new TypeMap() {
         override def apply(tp: Type): Type = tp match {
           case tp: TypeRef if tp.typeSymbol.owner == oldSym && tp.typeSymbol.is(Param) =>
@@ -124,8 +113,17 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
         }
       }
 
-      val treeTypeMap = new TreeTypeMap(typeMap, treeMap, oldSym :: Nil, specSym :: Nil)
+      // Transform references to terms
+      def vparamssSyms(vparamss: List[List[Tree]]): List[Symbol] = vparamss.flatten.map(_.symbol)
+      val transformVparams: Map[Symbol, Symbol] = (vparamssSyms(ddef.vparamss) zip vparamssSyms(vparamss)).toMap
+      def treeMap(tree: Tree): Tree = tree match {
+        case t: Ident if t.symbol.is(Param) && t.symbol.owner == oldSym => ref(transformVparams(t.symbol))
+        case Return(t, from) if from.symbol == oldSym => Return(t, ref(specSym))
+        case t => t
+      }
 
+      // Apply transforms
+      val treeTypeMap = new TreeTypeMap(typeMap, treeMap, oldSym :: Nil, specSym :: Nil)
       treeTypeMap.transform(ddef.rhs)
     }
 
