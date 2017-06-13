@@ -10,6 +10,7 @@ import Decorators._
 import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.ast.{TreeTypeMap, tpd}
 import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.core.Names._
 
 import scala.collection.mutable
 
@@ -54,7 +55,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     val key = (sym, specBounds)
     def newSpecializedMethod = {
       val symInfo = sym.info.asInstanceOf[PolyType]
-      val specName = sym.name ++ "$spec"
+      val specName = sym.name ++ specializedNameSuffix(specBounds)
       val specFlags = sym.flags | Synthetic
       val specInfo = symInfo.derivedLambdaType(paramInfos = specBounds)
       val specSym = ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
@@ -68,6 +69,14 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       case Some(specSym) => specSym
       case None => newSpecializedMethod
     }
+  }
+
+  private val boundNames = mutable.Map.empty[List[TypeBounds], Name]
+  private var nameIdx = 0
+  private def specializedNameSuffix(specBounds: List[TypeBounds])(implicit ctx: Context): Name = {
+    // TODO Use unique names
+    // TODO use specInfo and not specBounds? see foo14 in specialized-1.scala
+    boundNames.getOrElseUpdate(specBounds, { nameIdx += 1; ("$spec$" + nameIdx).toTermName })
   }
 
   private def getDefDefOf(sym: Symbol)(implicit ctx: Context): DefDef =
