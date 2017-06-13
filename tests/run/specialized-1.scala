@@ -1,28 +1,28 @@
 object Test {
   def main(args: Array[String]): Unit = {
-    checkTrace(foo1[Int](), List("foo1$spec$1", "throws"))
-    checkTrace(foo2[Int](1), List("foo2$spec$1", "throws$spec$1"))
-    checkTrace(foo3(1), List("foo3$spec$1", "throws$spec$1"))
+    checkTrace(foo1[Int](), List("foo1$spec", "throws"))
+    checkTrace(foo2[Int](1), List("foo2$spec", "throws$spec"))
+    checkTrace(foo3(1), List("foo3$spec", "throws$spec"))
     checkTrace(foo3("abc"), List("foo3", "throws"))
-    checkTrace(foo4(1, 0.2), List("foo4$spec$2", "throws$spec$1"))
-    checkTrace(foo5(1, 0.2), List("foo5$spec$2", "throws"))
-    checkTrace(foo6(1, true), List("foo6$spec$1", "throws$spec$1"))
-    checkTrace(foo7(1, true), List("foo7$spec$1", "foo7$spec$1", "throws$spec$1"))
+    checkTrace(foo4(1, 0.2), List("foo4$spec", "throws$spec"))
+    checkTrace(foo5(1, 0.2), List("foo5$spec", "throws"))
+    checkTrace(foo6(1, true), List("foo6$spec", "throws$spec"))
+    checkTrace(foo7(1, true), List("foo7$spec", "foo7$spec", "throws$spec"))
     try { // non-determinism on the names of inner function mangling
-      checkTrace(foo8(1), List("foo8$spec$1", "foo8_2$1", "throws$spec$1"))
+      checkTrace(foo8(1), List("foo8$spec", "foo8_2$1", "throws$spec"))
     } catch {
       case _: AssertionError =>
-        checkTrace(foo8(1), List("foo8$spec$1", "foo8_2$2", "throws$spec$1"))
+        checkTrace(foo8(1), List("foo8$spec", "foo8_2$2", "throws$spec"))
     }
-    checkTrace(foo9(1, false), List("foo9$spec$1", "throws$spec$1"))
-    checkTrace(foo10(1), List("foo10$spec$1", "throws$spec$1"))
+    checkTrace(foo9(1, false), List("foo9$spec", "throws$spec"))
+    checkTrace(foo10(1), List("foo10$spec", "throws$spec"))
     checkTrace(foo10("abc"), List("foo10", "throws"))
-    checkTrace(foo10(new Object), List("foo10", "throws$spec$1"))
+    checkTrace(foo10(new Object), List("foo10", "throws$spec"))
     foo11(1)
-    checkTrace(foo12(new VC(1)), List("foo12$spec$3", "throws$spec$3"))
-    checkTrace(foo12(new VC2(1)), List("foo12$spec$4", "throws$spec$4"))
-    checkTrace(foo12(1), List("foo12$spec$1", "throws$spec$1"))
-    checkTrace(foo13(new A), List("foo13", "foo$spec$1", "throws$spec$1"))
+    checkTrace(foo12(new VC(1)), List("foo12$spec$1", "throws$spec$1"))
+    checkTrace(foo12(new VC2(1)), List("foo12$spec$2", "throws$spec$2"))
+    checkTrace(foo12(1), List("foo12$spec", "throws$spec"))
+    checkTrace(foo13(new A), List("foo13", "foo$spec", "throws$spec"))
 //    checkTrace(foo13(new B), List("foo13", "foo$spec", "throws2$spec")) // FIXME: B.foo13 not getting specialized
 //    checkTrace(foo14(1, 2), List()) // FIXME: ambigouous overload
   }

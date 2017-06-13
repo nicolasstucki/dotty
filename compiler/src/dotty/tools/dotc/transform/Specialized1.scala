@@ -76,7 +76,9 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private def specializedNameSuffix(specBounds: List[TypeBounds])(implicit ctx: Context): Name = {
     // TODO Use unique names
     // TODO use specInfo and not specBounds? see foo14 in specialized-1.scala
-    boundNames.getOrElseUpdate(specBounds, { nameIdx += 1; ("$spec$" + nameIdx).toTermName })
+    val hasValueClasses = specBounds.exists(sb => !sb.classSymbol.isPrimitiveValueClass && sb.classSymbol.isValueClass)
+    if (!hasValueClasses) "$spec".toTermName
+    else boundNames.getOrElseUpdate(specBounds, { nameIdx += 1; ("$spec$" + nameIdx).toTermName })
   }
 
   private def getDefDefOf(sym: Symbol)(implicit ctx: Context): DefDef =
