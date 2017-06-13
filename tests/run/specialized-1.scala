@@ -25,6 +25,8 @@ object Test {
     checkTrace(foo13(new A), List("foo13", "foo$spec", "throws$spec"))
 //    checkTrace(foo13(new B), List("foo13", "foo$spec", "throws2$spec")) // FIXME: B.foo13 not getting specialized
 //    checkTrace(foo14(1, 2), List()) // FIXME: ambigouous overload
+    checkTrace(foo15(1), List("foo15$spec", "foo15_inner$spec$1", "throws$spec"))
+    checkTrace(foo16(1), List("foo16$spec", "foo16_inner$spec", "throws$spec"))
   }
 
   def foo1[T: Specialized]() = {
@@ -111,6 +113,19 @@ object Test {
   }
   def foo14[T: Specialized](x: T, y: Int) = {
     throws(x)
+  }
+
+  def foo15[T: Specialized](x: T) = {
+    def foo15_inner[U: Specialized](y: U) = throws(y)
+    foo15_inner(x)
+  }
+
+  def foo16[T: Specialized](x: T) = {
+    class Foo16 {
+      def foo16_inner[U: Specialized](y: U) = throws(y)
+    }
+    val y = new Foo16
+    y.foo16_inner(x)
   }
 
   def throws[U: Specialized](x: U): Unit = throw new StackCheck

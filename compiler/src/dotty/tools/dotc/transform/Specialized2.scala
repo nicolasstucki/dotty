@@ -21,7 +21,7 @@ class Specialized2 extends MiniPhaseTransform with InfoTransformer { thisTransfo
     // TODO: Add specialization in the class transform
     val specTrees = specializations.getOrElse(tree.symbol, Nil)
     if (specTrees.isEmpty) tree
-    else Thicket(tree :: specTrees)
+    else Thicket(tree :: specTrees.map(x => transform(x)))
   }
 
   override def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type = {

@@ -29,7 +29,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     val sym = tree.symbol
     lazy val targs = tree.args.map(_.tpe.widenDealias)
     lazy val specBounds = specializedBounds(sym, targs)
-    if (!isSpecilizable(sym)) tree
+    if (!isSpecilizableMethod(sym)) tree
     else if (specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
     else {
       val specSym = specializedMethod(sym, specBounds)
@@ -41,7 +41,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     }
   }
 
-  private def isSpecilizable(sym: Symbol)(implicit ctx: Context): Boolean = {
+  private def isSpecilizableMethod(sym: Symbol)(implicit ctx: Context): Boolean = {
     def rec(tpe: Type): Boolean = tpe match {
       case tpe: MethodType if tpe.paramInfos.exists(_.classSymbol eq defn.SpecializedClass) => true
       case tpe: MethodicType => rec(tpe.resultType)
@@ -84,12 +84,15 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private def getDefDefOf(sym: Symbol)(implicit ctx: Context): DefDef =
     ctx.phaseOfClass(classOf[Specialized0]).asInstanceOf[Specialized0].specializableDefDefs(sym)
 
+  private def registerDefDef(ddef: DefDef)(implicit ctx: Context): Unit =
+    ctx.phaseOfClass(classOf[Specialized0]).asInstanceOf[Specialized0].specializableDefDefs.put(ddef.symbol, ddef)
+
   private def specializedBounds(sym: Symbol, targs: List[Type])(implicit ctx: Context): List[TypeBounds] = {
     val typeBounds = sym.info.asInstanceOf[PolyType].paramInfos
     val specializableIdxs = specilizableTypeParams(sym)
 
     targs.zipWithIndex.map { case (tpe, idx) =>
-      if (specializableIdxs.contains(idx) && isSpecilizable(tpe)) TypeAlias(tpe.classSymbol.typeRef)
+      if (specializableIdxs.contains(idx) && isSpecilizableType(tpe)) TypeAlias(tpe.classSymbol.typeRef)
       else typeBounds(idx)
     }
   }
@@ -108,7 +111,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     }
   }
 
-  private def isSpecilizable(tpe: Type)(implicit ctx: Context): Boolean = {
+  private def isSpecilizableType(tpe: Type)(implicit ctx: Context): Boolean = {
     tpe =:= defn.IntType ||
     tpe =:= defn.LongType ||
     tpe =:= defn.ShortType ||
@@ -149,10 +152,12 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
     val specDefDef = polyDefDef(specSym.asTerm, rhsFn)
 
-    // Sanity checks
     val trav = new TreeTraverser {
-      def traverse(tree: Tree)(implicit ctx: Context): Unit = {
-        assert(!tree.symbol.exists || tree.symbol.owner != ddef.symbol, tree)
+      override def traverse(tree: tpd.Tree)(implicit ctx: Context): Unit = {
+        tree match {
+          case tree: DefDef if isSpecilizableMethod(tree.symbol) => registerDefDef(tree)
+          case _ =>
+        }
         traverseChildren(tree)
       }
     }
