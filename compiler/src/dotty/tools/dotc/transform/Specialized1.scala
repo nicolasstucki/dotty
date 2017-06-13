@@ -147,7 +147,18 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       treeTypeMap.transform(ddef.rhs)
     }
 
-    transformSpecializedBody(polyDefDef(specSym.asTerm, rhsFn))
+    val specDefDef = polyDefDef(specSym.asTerm, rhsFn)
+
+    // Sanity checks
+    val trav = new TreeTraverser {
+      def traverse(tree: Tree)(implicit ctx: Context): Unit = {
+        assert(!tree.symbol.exists || tree.symbol.owner != ddef.symbol, tree)
+        traverseChildren(tree)
+      }
+    }
+    trav.traverse(specDefDef)
+
+    transformSpecializedBody(specDefDef)
   }
 
   private def transformSpecializedBody(specDefDef: DefDef)(implicit ctx: Context): DefDef = {
