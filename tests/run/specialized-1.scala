@@ -30,10 +30,12 @@ object Test {
     checkTrace(foo16(1), List("foo16$spec$1", "foo16_inner$spec$1", "throws$spec$1"))
     checkTrace(foo16(new A), List("foo16", "foo$spec$1", "throws$spec$1"))
     checkTrace(foo16(new B), List("foo16", "foo$spec$1", "throws2$spec$1"))
-    checkTrace(foo17_1(new B), List("foo17_1", "foo$spec$5", "throws2$spec$5"))
-    checkTrace(foo17_2(new A), List("foo17_2", "foo$spec$6", "throws$spec$6"))
-    // checkTrace(foo18[true](), List()) // FIXME
-    // checkTrace(foo19[true](true), List()) // FIXME
+    checkTrace(foo17_1(new B), List("foo17_1", "foo$spec$8", "throws2$spec$8"))
+    checkTrace(foo17_2(new A), List("foo17_2", "foo$spec$9", "throws$spec$9"))
+    checkTrace(foo18[true](), List("foo18$spec$5", "throws"))
+    checkTrace(foo18[false](), List("foo18$spec$6", "throws"))
+    checkTrace(foo19[true](true), List("foo19$spec$5", "throws$spec$7"))
+    checkTrace(foo19[false](false), List("foo19$spec$6", "throws2$spec$7"))
   }
 
   def foo1[T: Specialized]() = {
@@ -151,8 +153,9 @@ object Test {
     ()
   }
 
-  def foo19[T: Specialized](x: T) = {
-    throws(x)
+  def foo19[T <: Boolean : Specialized](x: T) = {
+    if (x) throws(x)
+    else throws2(x)
   }
 
   def throws[U: Specialized](x: U): Unit = throw new StackCheck

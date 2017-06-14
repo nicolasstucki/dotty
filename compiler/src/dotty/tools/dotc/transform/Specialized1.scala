@@ -37,7 +37,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   private def specializedTypeApply(tree: TypeApply)(implicit ctx: Context) = {
     val sym = tree.symbol
-    lazy val targs = tree.args.map(_.tpe.widenDealias)
+    lazy val targs = tree.args.map(_.tpe)
     lazy val specBounds = specializedBounds(sym, targs)
     if (!isSpecilizableMethod(sym) || specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
     else {
@@ -105,8 +105,11 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     val specializableIdxs = specilizableTypeParams(sym)
 
     targs.zipWithIndex.map { case (tpe, idx) =>
-      if (specializableIdxs.contains(idx) && isSpecilizableType(tpe)) TypeAlias(tpe.classSymbol.typeRef)
-      else typeBounds(idx)
+      if (specializableIdxs.contains(idx) && isSpecilizableType(tpe.widenDealias)) {
+        // TODO constant fold parameters specialized to singleton types
+        if (tpe.isInstanceOf[ConstantType]) TypeAlias(tpe)
+        else TypeAlias(tpe.widenDealias.classSymbol.typeRef)
+      } else typeBounds(idx)
     }
   }
 
