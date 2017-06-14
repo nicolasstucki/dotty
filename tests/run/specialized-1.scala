@@ -4,8 +4,8 @@ object Test {
     checkTrace(foo2[Int](1), List("foo2$spec$1", "throws$spec$1"))
     checkTrace(foo3(1), List("foo3$spec$1", "throws$spec$1"))
     checkTrace(foo3("abc"), List("foo3", "throws"))
-    checkTrace(foo4(1, 0.2), List("foo4$spec$1", "throws$spec$1"))
-    checkTrace(foo5(1, 0.2), List("foo5$spec$1", "throws"))
+    checkTrace(foo4(1, 0.2), List("foo4$spec$2", "throws$spec$1"))
+    checkTrace(foo5(1, 0.2), List("foo5$spec$2", "throws"))
     checkTrace(foo6(1, true), List("foo6$spec$1", "throws$spec$1"))
     checkTrace(foo7(1, true), List("foo7$spec$1", "foo7$spec$1", "throws$spec$1"))
     try { // non-determinism on the names of inner function mangling
@@ -19,18 +19,19 @@ object Test {
     checkTrace(foo10("abc"), List("foo10", "throws"))
     checkTrace(foo10(new Object), List("foo10", "throws$spec$1"))
     foo11(1)
-    checkTrace(foo12(new VC(1)), List("foo12$spec$1", "throws$spec$2"))
-    checkTrace(foo12(new VC2(1)), List("foo12$spec$2", "throws$spec$3"))
-    checkTrace(foo12(1), List("foo12$spec$3", "throws$spec$1"))
+    checkTrace(foo12(new VC(1)), List("foo12$spec$3", "throws$spec$3"))
+    checkTrace(foo12(new VC2(1)), List("foo12$spec$4", "throws$spec$4"))
+    checkTrace(foo12(1), List("foo12$spec$1", "throws$spec$1"))
     checkTrace(foo13(new A), List("foo13", "foo$spec$1", "throws$spec$1"))
     checkTrace(foo13(new B), List("foo13", "foo$spec$1", "throws2$spec$1"))
-//    checkTrace(foo14(1, 2), List()) // FIXME: ambigouous overload
+    // checkTrace(foo14(true, 2), List()) // FIXME: overload ambigouity
+    // checkTrace(foo14(1, false), List())
     checkTrace(foo15(1), List("foo15$spec$1", "foo15_inner$spec$1$1", "throws$spec$1"))
     checkTrace(foo16(1), List("foo16$spec$1", "foo16_inner$spec$1", "throws$spec$1"))
     checkTrace(foo16(new A), List("foo16", "foo$spec$1", "throws$spec$1"))
     checkTrace(foo16(new B), List("foo16", "foo$spec$1", "throws2$spec$1"))
-    // checkTrace(foo17_1(new B), List()) Fixme: ambigouous indices (need to sync with overrides)
-    checkTrace(foo17_2(new A), List("foo17_2", "foo$spec$2", "throws$spec$4"))
+    checkTrace(foo17_1(new B), List("foo17_1", "foo$spec$5", "throws2$spec$5"))
+    checkTrace(foo17_2(new A), List("foo17_2", "foo$spec$6", "throws$spec$6"))
   }
 
   def foo1[T: Specialized]() = {
@@ -136,10 +137,9 @@ object Test {
     a.foo(1) // FIXME fails -Ycheck:all
   }
 
-  // Fixme: ambigouous indices (need to sync with overrides)
-  // def foo17_1(a: B) = {
-  //   a.foo(1L)
-  // }
+  def foo17_1(a: B) = {
+    a.foo(1L)
+  }
   def foo17_2(a: A) = {
     a.foo(1.0)
   }

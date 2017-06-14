@@ -24,10 +24,15 @@ class Specialized2 extends MiniPhaseTransform with InfoTransformer { thisTransfo
   }
 
   override def transformDefDef(tree: tpd.DefDef)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
-    // TODO: Add specialization in the class transform
     val specTrees = specialized1.specDefDefs.getOrElse(tree.symbol, Nil)
     if (specTrees.isEmpty) tree
-    else Thicket(tree :: specTrees.map(x => transform(x)))
+    else {
+      for (x <- specTrees) { // clear Override flag if overrides where not specialized
+        if (x.symbol.is(Override) && x.symbol.allOverriddenSymbols.isEmpty)
+          x.symbol.resetFlag(Override)
+      }
+      Thicket(tree :: specTrees.map(x => transform(x)))
+    }
   }
 
   override def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type = {

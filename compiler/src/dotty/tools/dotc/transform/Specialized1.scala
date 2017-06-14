@@ -78,19 +78,14 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     }
   }
 
-  private val boundNames = mutable.Map.empty[(Symbol, SpecBounds), Name]
-  private val nameIdx = mutable.Map.empty[Symbol, Int]
+  private val boundNames = mutable.Map.empty[SpecBounds, Name]
+  private var nameIdx = 0
   private def specializedNameSuffix(sym: Symbol, specBounds: SpecBounds)(implicit ctx: Context): Name = {
-    // TODO Use unique names
-    // TODO use specInfo and not specBounds? see foo14 in specialized-1.scala
-    val hasValueClasses = specBounds.exists(sb => !sb.classSymbol.isPrimitiveValueClass && sb.classSymbol.isValueClass)
-    val hasByName = sym.info.paramInfoss.flatten.exists(_.isInstanceOf[ExprType]) // workaround, need to use specInfo
     def makeNewName = {
-      val idx = nameIdx.getOrElseUpdate(sym, 1)
-      nameIdx.put(sym, idx + 1)
-      ("$spec$" + idx).toTermName
+      nameIdx += 1
+      ("$spec$" + nameIdx).toTermName
     }
-    boundNames.getOrElseUpdate((sym, specBounds), makeNewName)
+    boundNames.getOrElseUpdate(specBounds, makeNewName)
   }
 
   private def allKnownOverwrites(sym: Symbol)(implicit ctx: Context): List[Symbol] =
