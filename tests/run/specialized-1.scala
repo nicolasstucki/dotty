@@ -23,10 +23,12 @@ object Test {
     checkTrace(foo12(new VC2(1)), List("foo12$spec$2", "throws$spec$2"))
     checkTrace(foo12(1), List("foo12$spec", "throws$spec"))
     checkTrace(foo13(new A), List("foo13", "foo$spec", "throws$spec"))
-    checkTrace(foo13(new B), List("foo13", "foo$spec", "throws2$spec")) // FIXME: B.foo13 not getting specialized
+    checkTrace(foo13(new B), List("foo13", "foo$spec", "throws2$spec"))
 //    checkTrace(foo14(1, 2), List()) // FIXME: ambigouous overload
     checkTrace(foo15(1), List("foo15$spec", "foo15_inner$spec$1", "throws$spec"))
     checkTrace(foo16(1), List("foo16$spec", "foo16_inner$spec", "throws$spec"))
+    checkTrace(foo16(new A), List("foo16", "foo$spec", "throws$spec"))
+    checkTrace(foo16(new B), List("foo16", "foo$spec", "throws2$spec"))
   }
 
   def foo1[T: Specialized]() = {
@@ -104,7 +106,7 @@ object Test {
     def bar(): Int = x
   }
 
-  def foo13[T](a: A) = {
+  def foo13(a: A) = {
     a.foo(1)
   }
 
@@ -126,6 +128,10 @@ object Test {
     }
     val y = new Foo16
     y.foo16_inner(x)
+  }
+
+  def foo16[X <: A](a: X) = {
+    a.foo(1)
   }
 
   def throws[U: Specialized](x: U): Unit = throw new StackCheck

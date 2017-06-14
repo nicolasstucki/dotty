@@ -127,7 +127,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   }
 
   private def isSpecilizableType(tpe: Type)(implicit ctx: Context): Boolean = {
-    ctx.settings.specializedForAll.value || // Fixme
+    ctx.settings.specializedForAll.value ||
     tpe =:= defn.IntType ||
     tpe =:= defn.LongType ||
     tpe =:= defn.ShortType ||
