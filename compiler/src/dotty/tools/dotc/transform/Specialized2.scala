@@ -16,19 +16,24 @@ class Specialized2 extends MiniPhaseTransform with InfoTransformer { thisTransfo
 
   override def phaseName = "specialized2"
 
+  private var specialized1: Specialized1 = _
+
+  override def prepareForUnit(tree: tpd.Tree)(implicit ctx: Context): TreeTransforms.TreeTransform = {
+    specialized1 = ctx.phaseOfClass(classOf[Specialized1]).asInstanceOf[Specialized1]
+    super.prepareForUnit(tree)
+  }
+
   override def transformDefDef(tree: tpd.DefDef)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
-    val specializations = ctx.phaseOfClass(classOf[Specialized1]).asInstanceOf[Specialized1].specDefDefs
     // TODO: Add specialization in the class transform
-    val specTrees = specializations.getOrElse(tree.symbol, Nil)
+    val specTrees = specialized1.specDefDefs.getOrElse(tree.symbol, Nil)
     if (specTrees.isEmpty) tree
     else Thicket(tree :: specTrees.map(x => transform(x)))
   }
 
   override def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type = {
-    val specializations = ctx.phaseOfClass(classOf[Specialized1]).asInstanceOf[Specialized1].specDefDefs
     tp match {
       case tp: ClassInfo =>
-        val newSyms = specializations.filter(_._1.owner == tp.cls).map(_._2).flatten.map(_.symbol)
+        val newSyms = specialized1.specDefDefsInClass.getOrElse(tp.cls, Nil)
         if (newSyms.isEmpty) tp
         else {
           val newDecls = tp.decls.cloneScope.openForMutations

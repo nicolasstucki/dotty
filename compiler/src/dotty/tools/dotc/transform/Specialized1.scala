@@ -21,6 +21,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   private val specSymbols: mutable.Map[(Symbol, List[Type]), Symbol] = mutable.Map.empty
   val specDefDefs: mutable.Map[Symbol, List[DefDef]] = mutable.Map.empty
+  val specDefDefsInClass: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
 
   private var specialized0Phase: Specialized0 = _
 
@@ -70,7 +71,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       specSymbols.put(key, specSym)
       val specDefDef = createSpecializedDefDef(getDefDefOf(sym), specSym)
       specDefDefs.put(sym, specDefDef :: specDefDefs.getOrElse(sym, Nil))
-      // FIXME: specialize overriding symbols (collect them in Specialize0)
+      if (sym.owner.isClass)
+        specDefDefsInClass.put(sym.owner, specSym :: specDefDefsInClass.getOrElse(sym.owner, Nil))
       specSym
     }
     specSymbols.get(key) match {
