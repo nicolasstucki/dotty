@@ -32,6 +32,8 @@ object Test {
     checkTrace(foo16(new B), List("foo16", "foo$spec$1", "throws2$spec$1"))
     checkTrace(foo17_1(new B), List("foo17_1", "foo$spec$5", "throws2$spec$5"))
     checkTrace(foo17_2(new A), List("foo17_2", "foo$spec$6", "throws$spec$6"))
+    // checkTrace(foo18[true](), List()) // FIXME
+    // checkTrace(foo19[true](true), List()) // FIXME
   }
 
   def foo1[T: Specialized]() = {
@@ -142,6 +144,15 @@ object Test {
   }
   def foo17_2(a: A) = {
     a.foo(1.0)
+  }
+
+  def foo18[T: Specialized]() = {
+    throws(null)
+    ()
+  }
+
+  def foo19[T: Specialized](x: T) = {
+    throws(x)
   }
 
   def throws[U: Specialized](x: U): Unit = throw new StackCheck
