@@ -133,7 +133,7 @@ object Test {
   }
 
   def foo16[X <: A](a: X) = {
-    a.foo(1)
+    a.foo(1) // FIXME fails -Ycheck:all
   }
 
   // Fixme: ambigouous indices (need to sync with overrides)
