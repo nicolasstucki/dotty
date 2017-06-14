@@ -19,6 +19,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   override def phaseName = "specialized1"
 
+  private type SpecBounds = List[TypeBounds]
+
   private val specSymbols: mutable.Map[(Symbol, List[Type]), Symbol] = mutable.Map.empty
   val specDefDefs: mutable.Map[Symbol, List[DefDef]] = mutable.Map.empty
   val specDefDefsInClass: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
@@ -49,7 +51,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     }
   }
 
-  private def specializedMethod(sym: Symbol, specBounds: List[TypeBounds])(implicit ctx: Context): Symbol = {
+  private def specializedMethod(sym: Symbol, specBounds: SpecBounds)(implicit ctx: Context): Symbol = {
     assert(sym.info.isInstanceOf[PolyType])
     val key = (sym, specBounds)
     def newSpecializedMethod = {
@@ -76,15 +78,19 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     }
   }
 
-  private val boundNames = mutable.Map.empty[List[TypeBounds], Name]
-  private var nameIdx = 0
-  private def specializedNameSuffix(sym: Symbol, specBounds: List[TypeBounds])(implicit ctx: Context): Name = {
+  private val boundNames = mutable.Map.empty[(Symbol, SpecBounds), Name]
+  private val nameIdx = mutable.Map.empty[Symbol, Int]
+  private def specializedNameSuffix(sym: Symbol, specBounds: SpecBounds)(implicit ctx: Context): Name = {
     // TODO Use unique names
     // TODO use specInfo and not specBounds? see foo14 in specialized-1.scala
     val hasValueClasses = specBounds.exists(sb => !sb.classSymbol.isPrimitiveValueClass && sb.classSymbol.isValueClass)
     val hasByName = sym.info.paramInfoss.flatten.exists(_.isInstanceOf[ExprType]) // workaround, need to use specInfo
-    if (!hasValueClasses && !hasByName) "$spec".toTermName
-    else boundNames.getOrElseUpdate(specBounds, { nameIdx += 1; ("$spec$" + nameIdx).toTermName })
+    def makeNewName = {
+      val idx = nameIdx.getOrElseUpdate(sym, 1)
+      nameIdx.put(sym, idx + 1)
+      ("$spec$" + idx).toTermName
+    }
+    boundNames.getOrElseUpdate((sym, specBounds), makeNewName)
   }
 
   private def allKnownOverwrites(sym: Symbol)(implicit ctx: Context): List[Symbol] =
@@ -99,7 +105,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private def isSpecilizableMethod(sym: Symbol)(implicit ctx: Context): Boolean =
     specialized0Phase.isSpecilizable(sym)
 
-  private def specializedBounds(sym: Symbol, targs: List[Type])(implicit ctx: Context): List[TypeBounds] = {
+  private def specializedBounds(sym: Symbol, targs: List[Type])(implicit ctx: Context): SpecBounds = {
     val typeBounds = sym.info.asInstanceOf[PolyType].paramInfos
     val specializableIdxs = specilizableTypeParams(sym)
 

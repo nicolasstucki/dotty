@@ -1,34 +1,36 @@
 object Test {
   def main(args: Array[String]): Unit = {
-    checkTrace(foo1[Int](), List("foo1$spec", "throws"))
-    checkTrace(foo2[Int](1), List("foo2$spec", "throws$spec"))
-    checkTrace(foo3(1), List("foo3$spec", "throws$spec"))
+    checkTrace(foo1[Int](), List("foo1$spec$1", "throws"))
+    checkTrace(foo2[Int](1), List("foo2$spec$1", "throws$spec$1"))
+    checkTrace(foo3(1), List("foo3$spec$1", "throws$spec$1"))
     checkTrace(foo3("abc"), List("foo3", "throws"))
-    checkTrace(foo4(1, 0.2), List("foo4$spec", "throws$spec"))
-    checkTrace(foo5(1, 0.2), List("foo5$spec", "throws"))
-    checkTrace(foo6(1, true), List("foo6$spec", "throws$spec"))
-    checkTrace(foo7(1, true), List("foo7$spec", "foo7$spec", "throws$spec"))
+    checkTrace(foo4(1, 0.2), List("foo4$spec$1", "throws$spec$1"))
+    checkTrace(foo5(1, 0.2), List("foo5$spec$1", "throws"))
+    checkTrace(foo6(1, true), List("foo6$spec$1", "throws$spec$1"))
+    checkTrace(foo7(1, true), List("foo7$spec$1", "foo7$spec$1", "throws$spec$1"))
     try { // non-determinism on the names of inner function mangling
-      checkTrace(foo8(1), List("foo8$spec", "foo8_2$1", "throws$spec"))
+      checkTrace(foo8(1), List("foo8$spec$1", "foo8_2$1", "throws$spec$1"))
     } catch {
       case _: AssertionError =>
-        checkTrace(foo8(1), List("foo8$spec", "foo8_2$2", "throws$spec"))
+        checkTrace(foo8(1), List("foo8$spec$1", "foo8_2$2", "throws$spec$1"))
     }
-    checkTrace(foo9(1, false), List("foo9$spec", "throws$spec"))
-    checkTrace(foo10(1), List("foo10$spec", "throws$spec"))
+    checkTrace(foo9(1, false), List("foo9$spec$1", "throws$spec$1"))
+    checkTrace(foo10(1), List("foo10$spec$1", "throws$spec$1"))
     checkTrace(foo10("abc"), List("foo10", "throws"))
-    checkTrace(foo10(new Object), List("foo10", "throws$spec"))
+    checkTrace(foo10(new Object), List("foo10", "throws$spec$1"))
     foo11(1)
-    checkTrace(foo12(new VC(1)), List("foo12$spec$1", "throws$spec$1"))
-    checkTrace(foo12(new VC2(1)), List("foo12$spec$2", "throws$spec$2"))
-    checkTrace(foo12(1), List("foo12$spec", "throws$spec"))
-    checkTrace(foo13(new A), List("foo13", "foo$spec", "throws$spec"))
-    checkTrace(foo13(new B), List("foo13", "foo$spec", "throws2$spec"))
+    checkTrace(foo12(new VC(1)), List("foo12$spec$1", "throws$spec$2"))
+    checkTrace(foo12(new VC2(1)), List("foo12$spec$2", "throws$spec$3"))
+    checkTrace(foo12(1), List("foo12$spec$3", "throws$spec$1"))
+    checkTrace(foo13(new A), List("foo13", "foo$spec$1", "throws$spec$1"))
+    checkTrace(foo13(new B), List("foo13", "foo$spec$1", "throws2$spec$1"))
 //    checkTrace(foo14(1, 2), List()) // FIXME: ambigouous overload
-    checkTrace(foo15(1), List("foo15$spec", "foo15_inner$spec$1", "throws$spec"))
-    checkTrace(foo16(1), List("foo16$spec", "foo16_inner$spec", "throws$spec"))
-    checkTrace(foo16(new A), List("foo16", "foo$spec", "throws$spec"))
-    checkTrace(foo16(new B), List("foo16", "foo$spec", "throws2$spec"))
+    checkTrace(foo15(1), List("foo15$spec$1", "foo15_inner$spec$1$1", "throws$spec$1"))
+    checkTrace(foo16(1), List("foo16$spec$1", "foo16_inner$spec$1", "throws$spec$1"))
+    checkTrace(foo16(new A), List("foo16", "foo$spec$1", "throws$spec$1"))
+    checkTrace(foo16(new B), List("foo16", "foo$spec$1", "throws2$spec$1"))
+    // checkTrace(foo17_1(new B), List()) Fixme: ambigouous indices (need to sync with overrides)
+    checkTrace(foo17_2(new A), List("foo17_2", "foo$spec$2", "throws$spec$4"))
   }
 
   def foo1[T: Specialized]() = {
@@ -134,6 +136,14 @@ object Test {
     a.foo(1)
   }
 
+  // Fixme: ambigouous indices (need to sync with overrides)
+  // def foo17_1(a: B) = {
+  //   a.foo(1L)
+  // }
+  def foo17_2(a: A) = {
+    a.foo(1.0)
+  }
+
   def throws[U: Specialized](x: U): Unit = throw new StackCheck
 
   def throws2[U: Specialized](x: U): Unit = throw new StackCheck
@@ -146,7 +156,9 @@ object Test {
     } catch {
       case sc: StackCheck =>
         val trace = sc.getStackTrace().toList.takeWhile(!_.getMethodName.startsWith("main")).map(_.getMethodName).reverse
-        assert(trace == expectedTrace, s"expected $expectedTrace but was $trace")
+        val traceFmt = trace.map(x => "\"" + x + "\"")
+        val expectedTraceFmt = expectedTrace.map(x => "\"" + x + "\"")
+        assert(trace == expectedTrace, s"expected $expectedTraceFmt but was $traceFmt")
     }
   }
 }
