@@ -22,6 +22,13 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private val specSymbols: mutable.Map[(Symbol, List[Type]), Symbol] = mutable.Map.empty
   val specDefDefs: mutable.Map[Symbol, List[DefDef]] = mutable.Map.empty
 
+  private var specialized0Phase: Specialized0 = _
+
+  override def prepareForUnit(tree: tpd.Tree)(implicit ctx: Context): TreeTransforms.TreeTransform = {
+    specialized0Phase = ctx.phaseOfClass(classOf[Specialized0]).asInstanceOf[Specialized0]
+    super.prepareForUnit(tree)
+  }
+
   override def transformTypeApply(tree: tpd.TypeApply)(implicit ctx: Context, info: TransformerInfo): tpd.Tree =
     specializedTypeApply(tree)
 
@@ -33,6 +40,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     else if (specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
     else {
       val specSym = specializedMethod(sym, specBounds)
+      allKnownOverwrites(sym).foreach(s => specializedMethod(s, specBounds))
       val specFun = tree.fun match {
         case Select(qual, _) => qual.select(specSym)
         case _ => ref(specSym)
@@ -81,11 +89,14 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     else boundNames.getOrElseUpdate(specBounds, { nameIdx += 1; ("$spec$" + nameIdx).toTermName })
   }
 
+  private def allKnownOverwrites(sym: Symbol)(implicit ctx: Context): List[Symbol] =
+    specialized0Phase.specializedOverwrites.getOrElse(sym, Nil)
+
   private def getDefDefOf(sym: Symbol)(implicit ctx: Context): DefDef =
-    ctx.phaseOfClass(classOf[Specialized0]).asInstanceOf[Specialized0].specializableDefDefs(sym)
+    specialized0Phase.specializedDefDefs(sym)
 
   private def registerDefDef(ddef: DefDef)(implicit ctx: Context): Unit =
-    ctx.phaseOfClass(classOf[Specialized0]).asInstanceOf[Specialized0].specializableDefDefs.put(ddef.symbol, ddef)
+    specialized0Phase.specializedDefDefs.put(ddef.symbol, ddef)
 
   private def specializedBounds(sym: Symbol, targs: List[Type])(implicit ctx: Context): List[TypeBounds] = {
     val typeBounds = sym.info.asInstanceOf[PolyType].paramInfos

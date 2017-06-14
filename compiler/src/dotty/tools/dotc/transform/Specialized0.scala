@@ -18,11 +18,15 @@ class Specialized0 extends MiniPhaseTransform { thisTransformer =>
 
   override def phaseName = "specialized0"
 
-  val specializableDefDefs: mutable.Map[Symbol, DefDef] = mutable.Map.empty
+  val specializedDefDefs: mutable.Map[Symbol, DefDef] = mutable.Map.empty
+  val specializedOverwrites: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
 
   override def transformDefDef(tree: tpd.DefDef)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
-    if (isSpecilizable(tree.symbol))
-      specializableDefDefs.put(tree.symbol, tree)
+    if (isSpecilizable(tree.symbol)) {
+      val sym = tree.symbol
+      specializedDefDefs.put(sym, tree)
+      sym.allOverriddenSymbols.foreach(s => specializedOverwrites.put(s, sym :: specializedOverwrites.getOrElse(s, Nil)))
+    }
     tree
   }
 
