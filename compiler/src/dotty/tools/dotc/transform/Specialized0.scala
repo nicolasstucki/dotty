@@ -36,8 +36,9 @@ class Specialized0 extends MiniPhaseTransform { thisTransformer =>
       case tpe: MethodicType => rec(tpe.resultType)
       case _ => false
     }
-    if (ctx.settings.specializeAll.value) sym.info.widenDealias.isInstanceOf[PolyType]
-    else rec(sym.info)
+    if (ctx.settings.specializeAll.value) {
+      !sym.owner.is(Scala2x) && (sym.owner ne defn.AnyClass) && sym.info.widenDealias.isInstanceOf[PolyType]
+    } else rec(sym.info)
   }
 
 }

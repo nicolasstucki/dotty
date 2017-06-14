@@ -37,11 +37,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     val sym = tree.symbol
     lazy val targs = tree.args.map(_.tpe.widenDealias)
     lazy val specBounds = specializedBounds(sym, targs)
-    if (!isSpecilizableMethod(sym)) tree
-    else if (specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
-    else if (sym.name.toString == "$specialized") tree // FIXME?
-    else if (sym.name.toString == "asInstanceOf") tree // FIXME
-    else if (sym.name.toString == "isInstanceOf") tree // FIXME
+    if (!isSpecilizableMethod(sym) || specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
     else {
       val specSym = specializedMethod(sym, specBounds)
       allKnownOverwrites(sym).foreach(s => specializedMethod(s, specBounds))
