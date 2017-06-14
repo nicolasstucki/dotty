@@ -39,6 +39,9 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     lazy val specBounds = specializedBounds(sym, targs)
     if (!isSpecilizableMethod(sym)) tree
     else if (specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
+    else if (sym.name.toString == "$specialized") tree // FIXME?
+    else if (sym.name.toString == "asInstanceOf") tree // FIXME
+    else if (sym.name.toString == "isInstanceOf") tree // FIXME
     else {
       val specSym = specializedMethod(sym, specBounds)
       allKnownOverwrites(sym).foreach(s => specializedMethod(s, specBounds))
@@ -50,21 +53,12 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     }
   }
 
-  private def isSpecilizableMethod(sym: Symbol)(implicit ctx: Context): Boolean = {
-    def rec(tpe: Type): Boolean = tpe match {
-      case tpe: MethodType if tpe.paramInfos.exists(_.classSymbol eq defn.SpecializedClass) => true
-      case tpe: MethodicType => rec(tpe.resultType)
-      case _ => false
-    }
-    rec(sym.info)
-  }
-
   private def specializedMethod(sym: Symbol, specBounds: List[TypeBounds])(implicit ctx: Context): Symbol = {
     assert(sym.info.isInstanceOf[PolyType])
     val key = (sym, specBounds)
     def newSpecializedMethod = {
       val symInfo = sym.info.asInstanceOf[PolyType]
-      val specName = sym.name ++ specializedNameSuffix(specBounds)
+      val specName = sym.name ++ specializedNameSuffix(sym, specBounds)
       val specFlags = sym.flags | Synthetic
       val specInfo = symInfo.derivedLambdaType(paramInfos = specBounds)
       val specSym = ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
@@ -73,6 +67,11 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       specDefDefs.put(sym, specDefDef :: specDefDefs.getOrElse(sym, Nil))
       if (sym.owner.isClass)
         specDefDefsInClass.put(sym.owner, specSym :: specDefDefsInClass.getOrElse(sym.owner, Nil))
+      ctx.debuglog(
+        s"""specialized
+          |  ${sym.show + sym.info.show} into
+          |  ${specSym.show + specSym.info.show}
+        """.stripMargin)
       specSym
     }
     specSymbols.get(key) match {
@@ -83,11 +82,12 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   private val boundNames = mutable.Map.empty[List[TypeBounds], Name]
   private var nameIdx = 0
-  private def specializedNameSuffix(specBounds: List[TypeBounds])(implicit ctx: Context): Name = {
+  private def specializedNameSuffix(sym: Symbol, specBounds: List[TypeBounds])(implicit ctx: Context): Name = {
     // TODO Use unique names
     // TODO use specInfo and not specBounds? see foo14 in specialized-1.scala
     val hasValueClasses = specBounds.exists(sb => !sb.classSymbol.isPrimitiveValueClass && sb.classSymbol.isValueClass)
-    if (!hasValueClasses) "$spec".toTermName
+    val hasByName = sym.info.paramInfoss.flatten.exists(_.isInstanceOf[ExprType]) // workaround, need to use specInfo
+    if (!hasValueClasses && !hasByName) "$spec".toTermName
     else boundNames.getOrElseUpdate(specBounds, { nameIdx += 1; ("$spec$" + nameIdx).toTermName })
   }
 
@@ -100,6 +100,9 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private def registerDefDef(ddef: DefDef)(implicit ctx: Context): Unit =
     specialized0Phase.specializedDefDefs.put(ddef.symbol, ddef)
 
+  private def isSpecilizableMethod(sym: Symbol)(implicit ctx: Context): Boolean =
+    specialized0Phase.isSpecilizable(sym)
+
   private def specializedBounds(sym: Symbol, targs: List[Type])(implicit ctx: Context): List[TypeBounds] = {
     val typeBounds = sym.info.asInstanceOf[PolyType].paramInfos
     val specializableIdxs = specilizableTypeParams(sym)
@@ -111,20 +114,24 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   }
 
   private def specilizableTypeParams(sym: Symbol)(implicit ctx: Context): List[Int] = {
-    sym.info.paramInfoss.flatten.collect {
-      case tpe: RefinedType if tpe.classSymbol eq defn.SpecializedClass =>
-        tpe.refinedInfo match {
-          case tp1: TypeAlias =>
-            tp1.underlying match {
-              case tp2: TypeParamRef => tp2.paramNum
-              case _ => assert(false); 0
-            }
-          case _ => assert(false); 0
-        }
+    if (ctx.settings.specializeAll.value) sym.info.asInstanceOf[PolyType].paramNames.indices.toList
+    else {
+      sym.info.paramInfoss.flatten.collect {
+        case tpe: RefinedType if tpe.classSymbol eq defn.SpecializedClass =>
+          tpe.refinedInfo match {
+            case tp1: TypeAlias =>
+              tp1.underlying match {
+                case tp2: TypeParamRef => tp2.paramNum
+                case _ => assert(false); 0
+              }
+            case _ => assert(false); 0
+          }
+      }
     }
   }
 
   private def isSpecilizableType(tpe: Type)(implicit ctx: Context): Boolean = {
+    ctx.settings.specializedForAll.value || // Fixme
     tpe =:= defn.IntType ||
     tpe =:= defn.LongType ||
     tpe =:= defn.ShortType ||

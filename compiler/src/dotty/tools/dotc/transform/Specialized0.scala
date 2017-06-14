@@ -30,13 +30,14 @@ class Specialized0 extends MiniPhaseTransform { thisTransformer =>
     tree
   }
 
-  private def isSpecilizable(sym: Symbol)(implicit ctx: Context): Boolean = {
+  def isSpecilizable(sym: Symbol)(implicit ctx: Context): Boolean = {
     def rec(tpe: Type): Boolean = tpe match {
       case tpe: MethodType if tpe.paramInfos.exists(_.classSymbol eq defn.SpecializedClass) => true
       case tpe: MethodicType => rec(tpe.resultType)
       case _ => false
     }
-    rec(sym.info)
+    if (ctx.settings.specializeAll.value) sym.info.widenDealias.isInstanceOf[PolyType]
+    else rec(sym.info)
   }
 
 }

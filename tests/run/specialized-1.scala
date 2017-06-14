@@ -134,7 +134,7 @@ object Test {
 
   class StackCheck extends Throwable
 
-  def checkTrace[T](thunk: => T, expectedTrace: List[String]): Unit = {
+  def checkTrace[Thunk](thunk: => Thunk, expectedTrace: List[String]): Unit = {
     try {
       thunk
     } catch {

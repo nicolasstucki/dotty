@@ -117,6 +117,8 @@ class ScalaSettings extends Settings.SettingGroup {
   val YoptFuel = IntSetting("-Yopt-fuel", "Maximum number of optimisations performed under -optimise.", -1)
   val optimise = BooleanSetting("-optimise", "Generates faster bytecode by applying local optimisations to the .program") withAbbreviation "-optimize"
   val XlinkOptimise = BooleanSetting("-Xlink-optimise", "Recompile library code with the application.").withAbbreviation("-Xlink-optimize")
+  val specializedForAll = BooleanSetting("-specializedForAll", "Specialize on all types at call site (danger: this might increase code size)")
+  val specializeAll = BooleanSetting("-specializeAll", "Specialize all type parameters (danger: this might increase code size)")
 
   /** Dottydoc specific settings */
   val siteRoot = StringSetting(
