@@ -4,7 +4,7 @@ object Test {
     checkTrace(foo2((x: Int) => x, 2), List("foo2$spec$1", "throws$spec$1"))
     val a: Int => Int = foo3[Int]
     checkTrace(a(2), List("apply", "foo3$spec$1$$anonfun$1", "throws$spec$1"))
-
+    foo2bob[Int]
   }
 
   def foo1[T: Specialized](x: T) = {
@@ -19,6 +19,8 @@ object Test {
   def foo3[T: Specialized]: T => T = {
     (x: T) => { throws(x); x }
   }
+
+  def foo2bob[T: Specialized]: Bob[T] = new Bob[T]
 
   def throws[U: Specialized](x: U): Unit = throw new StackCheck
 
@@ -38,3 +40,5 @@ object Test {
     }
   }
 }
+
+class Bob[T]
