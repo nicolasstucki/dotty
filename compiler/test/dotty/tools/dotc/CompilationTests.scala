@@ -94,6 +94,11 @@ class CompilationTests extends ParallelTesting {
     compileFilesInDir("../tests/pos-scala2", scala2Mode) +
     compileFilesInDir("../tests/pos", defaultOptions) +
     compileFilesInDir("../tests/pos-deep-subtype", allowDeepSubtypes) +
+    // specialize test
+    //    compileFilesInDir("../tests/pos", defaultOptions :+ "-specializeAll") + // FIXME
+    compileFile("../tests/run/specialized-1.scala", defaultOptions :+ "-specializeAll" :+ "-specializedForAll") +
+    compileFile("../tests/run/specialized-2.scala", defaultOptions :+ "-specializeAll" :+ "-specializedForAll") +
+    //
     compileFile(
       // succeeds despite -Xfatal-warnings because of -nowarn
       "../tests/neg/customArgs/xfatalWarnings.scala",
