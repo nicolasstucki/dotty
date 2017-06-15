@@ -22,24 +22,12 @@ class Specialized0 extends MiniPhaseTransform { thisTransformer =>
   val specializedOverwrites: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
 
   override def transformDefDef(tree: tpd.DefDef)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
-    if (isSpecilizable(tree.symbol)) {
+    if (tree.symbol.isSpecilizable) {
       val sym = tree.symbol
       specializedDefDefs.put(sym, tree)
       sym.allOverriddenSymbols.foreach(s => specializedOverwrites.put(s, sym :: specializedOverwrites.getOrElse(s, Nil)))
     }
     tree
-  }
-
-  def isSpecilizable(sym: Symbol)(implicit ctx: Context): Boolean = {
-    def rec(tpe: Type): Boolean = tpe match {
-      case tpe: MethodType if tpe.paramInfos.exists(_.classSymbol eq defn.SpecializedClass) => true
-      case tpe: MethodicType => rec(tpe.resultType)
-      case _ => false
-    }
-    !sym.owner.is(Scala2x) && (sym.owner ne defn.AnyClass) && {
-      if (ctx.settings.specializeAll.value) sym.info.widenDealias.isInstanceOf[PolyType]
-      else rec(sym.info)
-    }
   }
 
 }

@@ -9,6 +9,7 @@ import Symbols._
 import Decorators._
 import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.ast.{TreeTypeMap, tpd}
+import dotty.tools.dotc.core.Annotations.ConcreteBodyAnnotation
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
 
@@ -39,7 +40,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     val sym = tree.symbol
     lazy val targs = tree.args.map(_.tpe)
     lazy val specBounds = specializedBounds(sym, targs)
-    if (!isSpecilizableMethod(sym) || specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
+    if (!sym.isSpecilizable || specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
     else {
       val specSym = specializedMethod(sym, specBounds)
       allKnownOverwrites(sym).foreach(s => specializedMethod(s, specBounds))
@@ -61,7 +62,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       val specInfo = symInfo.derivedLambdaType(paramInfos = specBounds)
       val specSym = ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
       specSymbols.put(key, specSym)
-      val specDefDef = createSpecializedDefDef(getDefDefOf(sym), specSym)
+      val specDefDef = createSpecializedDefDef(sym, specSym)
       specDefDefs.put(sym, specDefDef :: specDefDefs.getOrElse(sym, Nil))
       if (sym.owner.isClass)
         specDefDefsInClass.put(sym.owner, specSym :: specDefDefsInClass.getOrElse(sym.owner, Nil))
@@ -91,14 +92,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private def allKnownOverwrites(sym: Symbol)(implicit ctx: Context): List[Symbol] =
     specialized0Phase.specializedOverwrites.getOrElse(sym, Nil)
 
-  private def getDefDefOf(sym: Symbol)(implicit ctx: Context): DefDef =
-    specialized0Phase.specializedDefDefs(sym)
-
   private def registerDefDef(ddef: DefDef)(implicit ctx: Context): Unit =
     specialized0Phase.specializedDefDefs.put(ddef.symbol, ddef)
-
-  private def isSpecilizableMethod(sym: Symbol)(implicit ctx: Context): Boolean =
-    specialized0Phase.isSpecilizable(sym)
 
   private def specializedBounds(sym: Symbol, targs: List[Type])(implicit ctx: Context): SpecBounds = {
     val typeBounds = sym.info.asInstanceOf[PolyType].paramInfos
@@ -143,8 +138,10 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     tpe.widenDealias.classSymbol.isValueClass
   }
 
-  private def createSpecializedDefDef(ddef: DefDef, specSym: Symbol)(implicit ctx: Context) = {
-    val oldSym = ddef.symbol
+  private def createSpecializedDefDef(oldSym: Symbol, specSym: Symbol)(implicit ctx: Context): DefDef = {
+    val ddef: DefDef = specialized0Phase.specializedDefDefs(oldSym) // TODO stop depending on this
+    val oldRhs = oldSym.getAnnotation(defn.BodyAnnot).get.asInstanceOf[ConcreteBodyAnnotation].body
+
     def rhsFn(tparams: List[Type])(vparamss: List[List[Tree]]) = {
       // Transform references to types
       lazy val transformTparams: Map[Symbol, Type] = ddef.tparams.map(_.symbol).zip(tparams).toMap
@@ -167,15 +164,16 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
       // Apply transforms
       val treeTypeMap = new TreeTypeMap(typeMap, treeMap, oldSym :: Nil, specSym :: Nil)
-      treeTypeMap.transform(ddef.rhs)
+      treeTypeMap.transform(oldRhs)
     }
 
     val specDefDef = polyDefDef(specSym.asTerm, rhsFn)
 
     val trav = new TreeTraverser {
       override def traverse(tree: tpd.Tree)(implicit ctx: Context): Unit = {
+        assert(!tree.symbol.exists || tree.symbol.owner != oldSym, tree)
         tree match {
-          case tree: DefDef if isSpecilizableMethod(tree.symbol) => registerDefDef(tree)
+          case tree: DefDef if tree.symbol.isSpecilizable => registerDefDef(tree)
           case _ =>
         }
         traverseChildren(tree)

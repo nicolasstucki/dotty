@@ -787,6 +787,18 @@ object SymDenotations {
       this.exists && (test(symbol) || allOverriddenSymbols.exists(test))
     }
 
+    def isSpecilizable(implicit ctx: Context): Boolean = {
+      def rec(tpe: Type): Boolean = tpe match {
+        case tpe: MethodType if tpe.paramInfos.exists(_.classSymbol eq defn.SpecializedClass) => true
+        case tpe: MethodicType => rec(tpe.resultType)
+        case _ => false
+      }
+      !owner.is(Scala2x) && (owner ne defn.AnyClass) && {
+        if (ctx.settings.specializeAll.value) info.widenDealias.isInstanceOf[PolyType]
+        else rec(info)
+      }
+    }
+
     // ------ access to related symbols ---------------------------------
 
     /* Modules and module classes are represented as follows:
