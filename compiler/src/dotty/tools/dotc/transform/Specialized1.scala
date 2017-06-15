@@ -9,7 +9,7 @@ import Symbols._
 import Decorators._
 import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.ast.{TreeTypeMap, tpd}
-import dotty.tools.dotc.core.Annotations.ConcreteBodyAnnotation
+import dotty.tools.dotc.core.Annotations.BodyAnnotation
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
 
@@ -140,7 +140,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   private def createSpecializedDefDef(oldSym: Symbol, specSym: Symbol)(implicit ctx: Context): DefDef = {
     val ddef: DefDef = specialized0Phase.specializedDefDefs(oldSym) // TODO stop depending on this
-    val oldRhs = oldSym.getAnnotation(defn.BodyAnnot).get.asInstanceOf[ConcreteBodyAnnotation].body
+    val oldRhs = oldSym.getAnnotation(defn.BodyAnnot).get.asInstanceOf[BodyAnnotation].tree
 
     def rhsFn(tparams: List[Type])(vparamss: List[List[Tree]]) = {
       // Transform references to types
