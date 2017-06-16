@@ -9,6 +9,7 @@ import Symbols._
 import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Flags._
+import dotty.tools.dotc.linker.OuterTargs
 
 class Specialized2 extends MiniPhaseTransform { thisTransformer =>
   import tpd._
@@ -20,6 +21,19 @@ class Specialized2 extends MiniPhaseTransform { thisTransformer =>
   override def prepareForUnit(tree: tpd.Tree)(implicit ctx: Context): TreeTransforms.TreeTransform = {
     specialized1 = ctx.phaseOfClass(classOf[Specialized1]).asInstanceOf[Specialized1]
     super.prepareForUnit(tree)
+  }
+
+
+  override def transformThis(tree: tpd.This)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
+    // TODO make improve way to get outerTargs
+    specialized1.specSymbols.find(_._2 == ctx.owner) match {
+      case Some(((_, outerTargs), _)) =>
+        val substMap = new SubstituteOuterTargs(outerTargs)
+        val newTpe = substMap(tree.tpe.widenDealias)
+        if (tree.tpe <:< newTpe) tree
+        else tree.asInstance(newTpe)
+      case None => tree
+    }
   }
 
   override def transformTypeApply(tree: tpd.TypeApply)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
@@ -45,6 +59,17 @@ class Specialized2 extends MiniPhaseTransform { thisTransformer =>
         if (sym.owner.isClass) sym.entered
       }
       Thicket(tree :: specTrees.map(x => transform(x)))
+    }
+  }
+
+  private final class SubstituteOuterTargs(outerTargs: OuterTargs)(implicit ctx: Context) extends DeepTypeMap {
+    override def apply(tp: Type): Type = tp match {
+      case RefinedType(parent, name, info) =>
+        outerTargs.mp.get(parent.classSymbol) match {
+          case Some(targMap) => RefinedType(parent, name, targMap.getOrElse(name, info))
+          case _ => mapOver(tp)
+        }
+      case _ => mapOver(tp)
     }
   }
 

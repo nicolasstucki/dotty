@@ -20,7 +20,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   override def phaseName = "specialized1"
 
-  private val specSymbols: mutable.Map[(Symbol, OuterTargs), Symbol] = mutable.Map.empty
+  val specSymbols: mutable.Map[(Symbol, OuterTargs), Symbol] = mutable.Map.empty
   val specDefDefs: mutable.Map[Symbol, List[DefDef]] = mutable.Map.empty
   val specDefDefsInClass: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
 
@@ -87,7 +87,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       val specInfo = symInfo.derivedLambdaType(paramInfos = specParamInfos)
       val specSym = ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
       specSymbols.put(key, specSym)
-      val specDefDef = createSpecializedDefDef(sym, specSym)
+      val specDefDef = createSpecializedDefDef(sym, specSym, outerTargs)
       specDefDefs.put(sym, specDefDef :: specDefDefs.getOrElse(sym, Nil))
       if (sym.owner.isClass)
         specDefDefsInClass.put(sym.owner, specSym :: specDefDefsInClass.getOrElse(sym.owner, Nil))
@@ -158,7 +158,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     tpe.widenDealias.classSymbol.isValueClass
   }
 
-  private def createSpecializedDefDef(oldSym: Symbol, specSym: Symbol)(implicit ctx: Context) = {
+  private def createSpecializedDefDef(oldSym: Symbol, specSym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context) = {
     val ddef = getDefDefOf(oldSym)
     def rhsFn(tparams: List[Type])(vparamss: List[List[Tree]]) = {
       // Transform references to types

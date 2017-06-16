@@ -6,7 +6,8 @@ object Test {
     checkTrace(a(2), List("apply", "foo3$spec$1$$anonfun$1", "throws$spec$2"))
     foo2bob[Int]
     foo2bob2[Int]
-    // new CONS[Int](null).prepend[Int] // FIXME issue on a `this` reference that needs to be casted
+    new CONS[Int](null).prepend[Int]
+    foo4[Int]
   }
 
   def foo1[T: Specialized](x: T) = {
@@ -21,6 +22,8 @@ object Test {
   def foo3[T: Specialized]: T => T = {
     (x: T) => { throws(x); x }
   }
+
+  def foo4[T: Specialized] = this
 
   def foo2bob[T: Specialized]: Bob = new Bob
 
