@@ -793,7 +793,7 @@ object SymDenotations {
         case tpe: MethodicType => rec(tpe.resultType)
         case _ => false
       }
-      !owner.is(Scala2x) && (owner ne defn.AnyClass) && {
+      !owner.is(Scala2x) && (owner ne defn.AnyClass) && (owner ne defn.ObjectClass) && {
         if (ctx.settings.specializeAll.value) {
           !isConstructor && info.widenDealias.isInstanceOf[PolyType]
         } else rec(info)
