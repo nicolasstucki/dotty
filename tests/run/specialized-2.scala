@@ -6,8 +6,9 @@ object Test {
     checkTrace(a(2), List("apply", "foo3$spec$1$$anonfun$1", "throws$spec$2"))
     foo2bob[Int]
     foo2bob2[Int]
-    new CONS[Int](null).prepend[Int]
     foo4[Int]
+    new CONS[Int](null).prepend[Int]
+    NIL2.prepend(1)
   }
 
   def foo1[T: Specialized](x: T) = {
@@ -53,3 +54,11 @@ class Bob2[T]
 class CONS[+T](tl: CONS[T]) {
   def prepend[U >: T : Specialized]: CONS[U] = this
 }
+
+abstract class LIST2[+T] {
+  def prepend [U >: T : Specialized] (x: U): LIST2[U] = new CONS2(x, this)
+}
+
+object NIL2 extends LIST2[Nothing]
+
+class CONS2[U](hd: U, tl: LIST2[U]) extends LIST2[U]

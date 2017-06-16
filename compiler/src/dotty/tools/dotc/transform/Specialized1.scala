@@ -39,10 +39,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   def getSpecializedSym(tree: TypeApply)(implicit ctx: Context): Symbol = {
     val sym = tree.symbol
     val targs = tree.args.map(_.tpe)
-    val qualOuterTargs = tree.fun match {
-      case Select(qual, _) => getOuterTargs(qual.tpe.widenDealias, OuterTargs.empty)
-      case _ => OuterTargs.empty
-    }
+    val qualOuterTargs = localOuterTargs(tree)
     def tparamsAsOuterTargs(acc: OuterTargs, s: Symbol): OuterTargs = {
       val names = s.info.asInstanceOf[PolyType].paramNames
       val specializedTargs = specilizableTypeParams(s).map(i => (names(i), targs(i).widenDealias))
@@ -57,12 +54,21 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     val sym = tree.symbol
     val targs = tree.args.map(_.tpe)
     val qualOuterTargs = tree.fun match {
-      case Select(qual, _) => getOuterTargs(qual.tpe, OuterTargs.empty)
+      case Select(qual, _) =>
+        def withParents(parents: List[Type], acc: OuterTargs): OuterTargs = {
+          parents.foldLeft(acc) { (acc1, p) =>
+            acc1.addAll(p.classSymbol, p.typeParams.map(t => (t.paramName, t.paramInfo.asInstanceOf[TypeBounds].lo)))
+          }
+        }
+        // TODO add parents of parents
+        val outerTargs = getOuterTargs(qual.tpe, OuterTargs.empty)
+        withParents(qual.tpe.widenDealias.parents, outerTargs)
+
       case _ => OuterTargs.empty
     }
     val names = sym.info.asInstanceOf[PolyType].paramNames
-    val specializedTargs = specilizableTypeParams(sym).map(i => (names(i), targs(i)))
-    qualOuterTargs.addAll(sym, specializedTargs)
+    val specializedTargs = specilizableTypeParams(sym).map(i => (names(i), targs(i).widenDealias))
+    qualOuterTargs.addAll(sym, specializedTargs.filter(t => isSpecilizableType(t._2)))
   }
 
   private def getOuterTargs(tpe: Type, acc: OuterTargs)(implicit ctx: Context): OuterTargs = tpe match {
