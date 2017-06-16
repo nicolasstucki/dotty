@@ -7,11 +7,10 @@ import Types._
 import Contexts.Context
 import Symbols._
 import dotty.tools.dotc.ast.Trees._
-import dotty.tools.dotc.ast.{TreeTypeMap, tpd}
-import dotty.tools.dotc.core.DenotTransformers.InfoTransformer
+import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Flags._
 
-class Specialized2 extends MiniPhaseTransform with InfoTransformer { thisTransformer =>
+class Specialized2 extends MiniPhaseTransform { thisTransformer =>
   import tpd._
 
   override def phaseName = "specialized2"
@@ -41,24 +40,12 @@ class Specialized2 extends MiniPhaseTransform with InfoTransformer { thisTransfo
     if (specTrees.isEmpty) tree
     else {
       for (x <- specTrees) { // clear Override flag if overrides where not specialized
-        if (x.symbol.is(Override) && x.symbol.allOverriddenSymbols.isEmpty)
-          x.symbol.resetFlag(Override)
+        val sym = x.symbol
+        if (sym.is(Override) && sym.allOverriddenSymbols.isEmpty) sym.resetFlag(Override)
+        if (sym.owner.isClass) sym.entered
       }
       Thicket(tree :: specTrees.map(x => transform(x)))
     }
   }
 
-  override def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type = {
-    tp match {
-      case tp: ClassInfo =>
-        val newSyms = specialized1.specDefDefsInClass.getOrElse(tp.cls, Nil)
-        if (newSyms.isEmpty) tp
-        else {
-          val newDecls = tp.decls.cloneScope.openForMutations
-          newSyms.foreach(sym => newDecls.enter(sym))
-          ClassInfo(tp.prefix, tp.cls, tp.classParents, newDecls, tp.selfInfo)
-        }
-      case _ => tp
-    }
-  }
 }

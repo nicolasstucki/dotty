@@ -1,12 +1,12 @@
 object Test {
   def main(args: Array[String]): Unit = {
     checkTrace(foo1(2), List("foo1$spec$1", "apply", "$anonfun$2", "throws$spec$1"))
-    checkTrace(foo2((x: Int) => x, 2), List("foo2$spec$1", "throws$spec$1"))
+    checkTrace(foo2((x: Int) => x, 2), List("foo2$spec$1", "throws$spec$2"))
     val a: Int => Int = foo3[Int]
-    checkTrace(a(2), List("apply", "foo3$spec$1$$anonfun$1", "throws$spec$1"))
+    checkTrace(a(2), List("apply", "foo3$spec$1$$anonfun$1", "throws$spec$2"))
     foo2bob[Int]
     foo2bob2[Int]
-//    new CONS[Int](null).prepend[Int] // FIXME
+    // new CONS[Int](null).prepend[Int] // FIXME issue on a `this` reference that needs to be casted
   }
 
   def foo1[T: Specialized](x: T) = {
@@ -47,7 +47,6 @@ class Bob
 
 class Bob2[T]
 
-class LIST[+T] {
-  def prepend[U >: T]: CONS[U] = new CONS(this)
+class CONS[+T](tl: CONS[T]) {
+  def prepend[U >: T : Specialized]: CONS[U] = this
 }
-class CONS[U](tl: LIST[U]) extends LIST[U]

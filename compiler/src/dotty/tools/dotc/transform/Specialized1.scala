@@ -11,6 +11,7 @@ import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.ast.{TreeTypeMap, tpd}
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
+import dotty.tools.dotc.linker.OuterTargs
 
 import scala.collection.mutable
 
@@ -19,9 +20,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   override def phaseName = "specialized1"
 
-  private type SpecBounds = List[TypeBounds]
-
-  private val specSymbols: mutable.Map[(Symbol, List[Type]), Symbol] = mutable.Map.empty
+  private val specSymbols: mutable.Map[(Symbol, OuterTargs), Symbol] = mutable.Map.empty
   val specDefDefs: mutable.Map[Symbol, List[DefDef]] = mutable.Map.empty
   val specDefDefsInClass: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
 
@@ -39,20 +38,53 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   def getSpecializedSym(tree: TypeApply)(implicit ctx: Context): Symbol = {
     val sym = tree.symbol
-    lazy val targs = tree.args.map(_.tpe)
-    lazy val specBounds = specializedBounds(sym, targs)
-    if (!sym.isSpecilizable || specBounds == sym.info.asInstanceOf[PolyType].paramInfos) NoSymbol
-    else specializedMethod(sym, specBounds)
+    val targs = tree.args.map(_.tpe)
+    val qualOuterTargs = tree.fun match {
+      case Select(qual, _) => getOuterTargs(qual.tpe.widenDealias, OuterTargs.empty)
+      case _ => OuterTargs.empty
+    }
+    def tparamsAsOuterTargs(acc: OuterTargs, s: Symbol): OuterTargs = {
+      val names = s.info.asInstanceOf[PolyType].paramNames
+      val specializedTargs = specilizableTypeParams(s).map(i => (names(i), targs(i).widenDealias))
+      acc.addAll(s, specializedTargs.filter(x => isSpecilizableType(x._2)))
+    }
+    val outerTargs = (sym :: allKnownOverwrites(sym)).foldLeft(qualOuterTargs)(tparamsAsOuterTargs)
+    if (!sym.isSpecilizable || !outerTargs.mp.contains(sym)) NoSymbol
+    else specializedMethod(sym, outerTargs)
   }
 
-  private def specializedMethod(sym: Symbol, specBounds: SpecBounds)(implicit ctx: Context): Symbol = {
+  def localOuterTargs(tree: TypeApply)(implicit ctx: Context): OuterTargs = {
+    val sym = tree.symbol
+    val targs = tree.args.map(_.tpe)
+    val qualOuterTargs = tree.fun match {
+      case Select(qual, _) => getOuterTargs(qual.tpe, OuterTargs.empty)
+      case _ => OuterTargs.empty
+    }
+    val names = sym.info.asInstanceOf[PolyType].paramNames
+    val specializedTargs = specilizableTypeParams(sym).map(i => (names(i), targs(i)))
+    qualOuterTargs.addAll(sym, specializedTargs)
+  }
+
+  private def getOuterTargs(tpe: Type, acc: OuterTargs)(implicit ctx: Context): OuterTargs = tpe match {
+    case RefinedType(parent, name, info) => getOuterTargs(parent, acc.add(parent.classSymbol, name, info))
+    case _ => acc
+  }
+
+  private def specializedMethod(sym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context): Symbol = {
     assert(sym.info.isInstanceOf[PolyType])
-    val key = (sym, specBounds)
+    val key = (sym, outerTargs)
     def newSpecializedMethod = {
       val symInfo = sym.info.asInstanceOf[PolyType]
-      val specName = sym.name ++ specializedNameSuffix(sym, specBounds)
+      val specName = sym.name ++ specializedNameSuffix(sym, outerTargs)
       val specFlags = sym.flags | Synthetic
-      val specInfo = symInfo.derivedLambdaType(paramInfos = specBounds)
+      val specParamInfos: List[TypeBounds] = outerTargs.mp.get(sym) match {
+        case Some(thisSpecial) =>
+          symInfo.paramInfos.zipWithConserve (symInfo.paramNames) {
+            case (info, name) => thisSpecial.get (name).map (tp => TypeAlias (tp) ).getOrElse(info)
+          }
+        case _ => symInfo.paramInfos
+      }
+      val specInfo = symInfo.derivedLambdaType(paramInfos = specParamInfos)
       val specSym = ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
       specSymbols.put(key, specSym)
       val specDefDef = createSpecializedDefDef(sym, specSym)
@@ -70,19 +102,21 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       case Some(specSym) => specSym
       case None =>
         val specSym = newSpecializedMethod
-        allKnownOverwrites(sym).foreach(s => specializedMethod(s, specBounds))
+        // TODO move this out to getSpecializedSym
+        allKnownOverwrites(sym).foreach(s => specializedMethod(s, outerTargs))
         specSym
     }
   }
 
-  private val boundNames = mutable.Map.empty[SpecBounds, Name]
-  private var nameIdx = 0
-  private def specializedNameSuffix(sym: Symbol, specBounds: SpecBounds)(implicit ctx: Context): Name = {
+  private val boundNames = mutable.Map.empty[(Name, OuterTargs), Name]
+  private val nameIdx = mutable.Map.empty[Name, Int]
+  private def specializedNameSuffix(sym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context): Name = {
     def makeNewName = {
-      nameIdx += 1
-      ("$spec$" + nameIdx).toTermName
+      val idx = nameIdx.getOrElse(sym.name, 0) + 1
+      nameIdx.put(sym.name, idx)
+      ("$spec$" + idx).toTermName
     }
-    boundNames.getOrElseUpdate(specBounds, makeNewName)
+    boundNames.getOrElseUpdate((sym.name, outerTargs), makeNewName)
   }
 
   private def allKnownOverwrites(sym: Symbol)(implicit ctx: Context): List[Symbol] =
@@ -93,19 +127,6 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   private def registerDefDef(ddef: DefDef)(implicit ctx: Context): Unit =
     specialized0Phase.specializedDefDefs.put(ddef.symbol, ddef)
-
-  private def specializedBounds(sym: Symbol, targs: List[Type])(implicit ctx: Context): SpecBounds = {
-    val typeBounds = sym.info.asInstanceOf[PolyType].paramInfos
-    val specializableIdxs = specilizableTypeParams(sym)
-
-    targs.zipWithIndex.map { case (tpe, idx) =>
-      if (specializableIdxs.contains(idx) && isSpecilizableType(tpe.widenDealias)) {
-        // TODO constant fold parameters specialized to singleton types
-        if (tpe.isInstanceOf[ConstantType]) TypeAlias(tpe)
-        else TypeAlias(tpe.widenDealias.classSymbol.typeRef)
-      } else typeBounds(idx)
-    }
-  }
 
   private def specilizableTypeParams(sym: Symbol)(implicit ctx: Context): List[Int] = {
     if (ctx.settings.specializeAll.value) sym.info.asInstanceOf[PolyType].paramNames.indices.toList
