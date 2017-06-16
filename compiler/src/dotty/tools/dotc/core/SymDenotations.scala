@@ -794,8 +794,9 @@ object SymDenotations {
         case _ => false
       }
       !owner.is(Scala2x) && (owner ne defn.AnyClass) && {
-        if (ctx.settings.specializeAll.value) info.widenDealias.isInstanceOf[PolyType]
-        else rec(info)
+        if (ctx.settings.specializeAll.value) {
+          !isConstructor && info.widenDealias.isInstanceOf[PolyType]
+        } else rec(info)
       }
     }
 
