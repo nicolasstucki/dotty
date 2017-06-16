@@ -32,23 +32,17 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     super.prepareForUnit(tree)
   }
 
-  override def transformTypeApply(tree: tpd.TypeApply)(implicit ctx: Context, info: TransformerInfo): tpd.Tree =
-    specializedTypeApply(tree)
+  override def transformTypeApply(tree: tpd.TypeApply)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
+    getSpecializedSym(tree) // trigger creation of specialized function symbols and trees
+    tree
+  }
 
-  private def specializedTypeApply(tree: TypeApply)(implicit ctx: Context) = {
+  def getSpecializedSym(tree: TypeApply)(implicit ctx: Context): Symbol = {
     val sym = tree.symbol
     lazy val targs = tree.args.map(_.tpe)
     lazy val specBounds = specializedBounds(sym, targs)
-    if (!sym.isSpecilizable || specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
-    else {
-      val specSym = specializedMethod(sym, specBounds)
-      allKnownOverwrites(sym).foreach(s => specializedMethod(s, specBounds))
-      val specFun = tree.fun match {
-        case Select(qual, _) => qual.select(specSym)
-        case _ => ref(specSym)
-      }
-      specFun.appliedToTypes(targs)
-    }
+    if (!sym.isSpecilizable || specBounds == sym.info.asInstanceOf[PolyType].paramInfos) NoSymbol
+    else specializedMethod(sym, specBounds)
   }
 
   private def specializedMethod(sym: Symbol, specBounds: SpecBounds)(implicit ctx: Context): Symbol = {
@@ -74,7 +68,10 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     }
     specSymbols.get(key) match {
       case Some(specSym) => specSym
-      case None => newSpecializedMethod
+      case None =>
+        val specSym = newSpecializedMethod
+        allKnownOverwrites(sym).foreach(s => specializedMethod(s, specBounds))
+        specSym
     }
   }
 
@@ -200,7 +197,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
             else if (!(args.head.tpe <:< qual.tpe)) Literal(Constants.Constant(false))
             else tree
           case _ =>
-            specializedTypeApply(tree)
+            getSpecializedSym(tree) // trigger creation of specialized function symbols and trees
+            tree
         }
       case _ => tree
     }

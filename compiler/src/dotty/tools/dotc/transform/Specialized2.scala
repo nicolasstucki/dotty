@@ -23,6 +23,19 @@ class Specialized2 extends MiniPhaseTransform with InfoTransformer { thisTransfo
     super.prepareForUnit(tree)
   }
 
+  override def transformTypeApply(tree: tpd.TypeApply)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
+    val specSym = specialized1.getSpecializedSym(tree)
+    if (specSym.exists) {
+      val specFun = tree.fun match {
+        case Select(qual, _) => qual.select(specSym)
+        case _ => ref(specSym)
+      }
+      specFun.appliedToTypes(tree.args.map(_.tpe))
+    } else {
+      tree
+    }
+  }
+
   override def transformDefDef(tree: tpd.DefDef)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
     val specTrees = specialized1.specDefDefs.getOrElse(tree.symbol, Nil)
     if (specTrees.isEmpty) tree

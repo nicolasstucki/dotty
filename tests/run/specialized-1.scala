@@ -8,12 +8,7 @@ object Test {
     checkTrace(foo5(1, 0.2), List("foo5$spec$2", "throws"))
     checkTrace(foo6(1, true), List("foo6$spec$1", "throws$spec$1"))
     checkTrace(foo7(1, true), List("foo7$spec$1", "foo7$spec$1", "throws$spec$1"))
-    try { // non-determinism on the names of inner function mangling
-      checkTrace(foo8(1), List("foo8$spec$1", "foo8_2$1", "throws$spec$1"))
-    } catch {
-      case _: AssertionError =>
-        checkTrace(foo8(1), List("foo8$spec$1", "foo8_2$2", "throws$spec$1"))
-    }
+    checkTrace(foo8(1), List("foo8$spec$1", "foo8_2$2", "throws$spec$1"))
     checkTrace(foo9(1, false), List("foo9$spec$1", "throws$spec$1"))
     checkTrace(foo10(1), List("foo10$spec$1", "throws$spec$1"))
     checkTrace(foo10("abc"), List("foo10", "throws"))
@@ -36,6 +31,8 @@ object Test {
     checkTrace(foo18[false](), List("foo18$spec$6", "throws"))
     checkTrace(foo19[true](true), List("foo19$spec$5", "throws$spec$7"))
     checkTrace(foo19[false](false), List("foo19$spec$6", "throws2$spec$7"))
+    val a = new A()
+    checkTrace(a.foo(1), List("foo$spec$1", "throws$spec$1"))
   }
 
   def foo1[T: Specialized]() = {
