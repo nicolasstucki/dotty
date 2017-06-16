@@ -6,6 +6,7 @@ object Test {
     checkTrace(a(2), List("apply", "foo3$spec$1$$anonfun$1", "throws$spec$1"))
     foo2bob[Int]
     foo2bob2[Int]
+//    new CONS[Int](null).prepend[Int] // FIXME
   }
 
   def foo1[T: Specialized](x: T) = {
@@ -45,3 +46,8 @@ object Test {
 class Bob
 
 class Bob2[T]
+
+class LIST[+T] {
+  def prepend[U >: T]: CONS[U] = new CONS(this)
+}
+class CONS[U](tl: LIST[U]) extends LIST[U]
