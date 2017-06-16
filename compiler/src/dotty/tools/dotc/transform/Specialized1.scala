@@ -216,7 +216,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
           // TODO: other patterns?
           case _ => true
         }
-        cpy.Match(tree)(sel, newCases)
+        if (newCases.isEmpty) Throw(New(defn.MatchErrorType, List(ref(sel.symbol))))
+        else cpy.Match(tree)(sel, newCases)
       case tree @ TypeApply(fun, args) =>
         fun match {
           case Select(qual, _) if fun.symbol == defn.Any_isInstanceOf =>
