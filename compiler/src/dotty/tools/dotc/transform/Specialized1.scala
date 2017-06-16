@@ -39,7 +39,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     val sym = tree.symbol
     lazy val targs = tree.args.map(_.tpe)
     lazy val specBounds = specializedBounds(sym, targs)
-    if (!isSpecilizableMethod(sym) || specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
+    if (!sym.isSpecilizable || specBounds == sym.info.asInstanceOf[PolyType].paramInfos) tree
     else {
       val specSym = specializedMethod(sym, specBounds)
       allKnownOverwrites(sym).foreach(s => specializedMethod(s, specBounds))
@@ -96,9 +96,6 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   private def registerDefDef(ddef: DefDef)(implicit ctx: Context): Unit =
     specialized0Phase.specializedDefDefs.put(ddef.symbol, ddef)
-
-  private def isSpecilizableMethod(sym: Symbol)(implicit ctx: Context): Boolean =
-    specialized0Phase.isSpecilizable(sym)
 
   private def specializedBounds(sym: Symbol, targs: List[Type])(implicit ctx: Context): SpecBounds = {
     val typeBounds = sym.info.asInstanceOf[PolyType].paramInfos
