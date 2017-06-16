@@ -22,7 +22,7 @@ class Specialized0 extends MiniPhaseTransform { thisTransformer =>
   val specializedOverwrites: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
 
   override def transformDefDef(tree: tpd.DefDef)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
-    if (tree.symbol.isSpecilizable) {
+    if (tree.symbol.isSpecializable) {
       val sym = tree.symbol
       // TODO stop depending on registering trees
       specializedDefDefs.put(sym, tree)

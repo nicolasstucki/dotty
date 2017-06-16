@@ -46,7 +46,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       acc.addAll(s, specializedTargs.filter(x => isSpecilizableType(x._2)))
     }
     val outerTargs = (sym :: allKnownOverwrites(sym)).foldLeft(qualOuterTargs)(tparamsAsOuterTargs)
-    if (!sym.isSpecilizable || !outerTargs.mp.contains(sym)) NoSymbol
+    if (!sym.isSpecializable || !outerTargs.mp.contains(sym)) NoSymbol
     else specializedMethod(sym, outerTargs)
   }
 
@@ -197,7 +197,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       override def traverse(tree: tpd.Tree)(implicit ctx: Context): Unit = {
         assert(!tree.symbol.exists || tree.symbol.owner != ddef.symbol, tree)
         tree match {
-          case tree: DefDef if tree.symbol.isSpecilizable => registerDefDef(tree)
+          case tree: DefDef if tree.symbol.isSpecializable => registerDefDef(tree)
           case _ =>
         }
         traverseChildren(tree)

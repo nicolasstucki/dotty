@@ -781,22 +781,24 @@ object SymDenotations {
     def matchNullaryLoosely(implicit ctx: Context): Boolean = {
       def test(sym: Symbol) =
         sym.is(JavaDefined) ||
-        sym.owner == defn.AnyClass ||
-        sym == defn.Object_clone ||
-        sym.owner.is(Scala2x)
+          sym.owner == defn.AnyClass ||
+          sym == defn.Object_clone ||
+          sym.owner.is(Scala2x)
       this.exists && (test(symbol) || allOverriddenSymbols.exists(test))
     }
 
-    def isSpecilizable(implicit ctx: Context): Boolean = {
-      def rec(tpe: Type): Boolean = tpe match {
+    def isSpecializable(implicit ctx: Context): Boolean = {
+      def paramIsSpecialized(tpe: Type): Boolean = tpe match {
         case tpe: MethodType if tpe.paramInfos.exists(_.classSymbol eq defn.SpecializedClass) => true
-        case tpe: MethodicType => rec(tpe.resultType)
+        case tpe: MethodicType => paramIsSpecialized(tpe.resultType)
         case _ => false
       }
-      !owner.is(Scala2x) && (owner ne defn.AnyClass) && (owner ne defn.ObjectClass) && {
+      !this.name.toString.startsWith("$lessinit$greater") && // FIXME: issue in DerivedName on default parameters
+      !owner.is(Scala2x) && !owner.is(JavaDefined) && (owner ne defn.AnyClass) && (owner ne defn.ObjectClass) && {
         if (ctx.settings.specializeAll.value) {
+          (name ne nme.unapply) && (name ne nme.unapplySeq) &&
           !isConstructor && info.widenDealias.isInstanceOf[PolyType]
-        } else rec(info)
+        } else paramIsSpecialized(info)
       }
     }
 
