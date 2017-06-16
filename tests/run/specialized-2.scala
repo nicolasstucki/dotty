@@ -9,6 +9,7 @@ object Test {
     foo4[Int]
     new CONS[Int](null).prepend[Int]
     NIL2.prepend(1)
+    // new C(new L(1)).map(x => x) // FIXME
   }
 
   def foo1[T: Specialized](x: T) = {
@@ -62,3 +63,9 @@ abstract class LIST2[+T] {
 object NIL2 extends LIST2[Nothing]
 
 class CONS2[U](hd: U, tl: LIST2[U]) extends LIST2[U]
+
+class L[T](x: T)
+
+class C[T](xs: L[T]) {
+  def map[U](f: T => U): C[T] = new C(xs)
+}
