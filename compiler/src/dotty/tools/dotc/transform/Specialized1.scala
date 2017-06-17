@@ -167,18 +167,21 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private def createSpecializedDefDef(oldSym: Symbol, specSym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context) = {
     val ddef = getDefDefOf(oldSym)
     def rhsFn(tparams: List[Type])(vparamss: List[List[Tree]]) = {
+      val transformTparams: Map[Symbol, Type] = ddef.tparams.map(_.symbol).zip(tparams).toMap
+      val transformVparams: Map[Symbol, Tree] = (ddef.vparamss.flatten.map(_.symbol) zip vparamss.flatten).toMap
+
       // Transform references to types
-      lazy val transformTparams: Map[Symbol, Type] = ddef.tparams.map(_.symbol).zip(tparams).toMap
       val typeMap = new TypeMap() {
         override def apply(tp: Type): Type = tp match {
           case tp: TypeRef if tp.typeSymbol.owner == oldSym && tp.typeSymbol.is(Param) =>
             transformTparams.getOrElse(tp.typeSymbol, tp)
+          case tp: TermRef if tp.termSymbol.owner == oldSym && tp.termSymbol.is(Param) =>
+            transformVparams.get(tp.termSymbol).map(_.symbol.termRef).getOrElse(tp)
           case _ => mapOver(tp)
         }
       }
 
       // Transform references to terms
-      val transformVparams: Map[Symbol, Tree] = (ddef.vparamss.flatten.map(_.symbol) zip vparamss.flatten).toMap
       def treeMap(tree: Tree): Tree = tree match {
         case tree: Ident if tree.symbol.isTerm && tree.symbol.is(Param) && tree.symbol.owner == oldSym =>
           transformVparams(tree.symbol)

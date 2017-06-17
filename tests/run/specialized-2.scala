@@ -10,7 +10,7 @@ object Test {
     new CONS[Int](null).prepend[Int]
     NIL2.prepend(1)
     // new C(new L(1)).map(x => x) // FIXME
-    //  SuccZipWith[Boolean](new ZipWith { type T = Int }) // FIXME
+    SuccZipWith[Boolean](new ZipWith { type T = Int }) // FIXME
   }
 
   def foo1[T: Specialized](x: T) = {
