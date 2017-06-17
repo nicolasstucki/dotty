@@ -75,3 +75,10 @@ class C[T](xs: L[T]) {
 }
 
 class ZipWith { type T }
+
+object Test2 extends Ops {
+  // a(1) // FIXME
+}
+class Ops {
+  def a[T: Specialized](self: T): Int = 2
+}
