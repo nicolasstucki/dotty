@@ -41,7 +41,7 @@ class Specialized2 extends MiniPhaseTransform { thisTransformer =>
     if (specSym.exists) {
       val specFun = tree.fun match {
         case Select(qual, _) => qual.select(specSym)
-        case _ => ref(specSym)
+        case ident: Ident => cpy.Ident(ident)(specSym.name)
       }
       specFun.appliedToTypes(tree.args.map(_.tpe))
     } else {
