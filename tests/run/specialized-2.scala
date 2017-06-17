@@ -10,6 +10,7 @@ object Test {
     new CONS[Int](null).prepend[Int]
     NIL2.prepend(1)
     // new C(new L(1)).map(x => x) // FIXME
+    //  SuccZipWith[Boolean](new ZipWith { type T = Int }) // FIXME
   }
 
   def foo1[T: Specialized](x: T) = {
@@ -30,6 +31,9 @@ object Test {
   def foo2bob[T: Specialized]: Bob = new Bob
 
   def foo2bob2[T: Specialized]: Bob2[T] = new Bob2[T]
+
+  def SuccZipWith[R](zWith : ZipWith): ZipWith { type T = zWith.T } =
+    new ZipWith { type T = zWith.T }
 
   def throws[U: Specialized](x: U): Unit = throw new StackCheck
 
@@ -69,3 +73,5 @@ class L[T](x: T)
 class C[T](xs: L[T]) {
   def map[U](f: T => U): C[T] = new C(xs)
 }
+
+class ZipWith { type T }
