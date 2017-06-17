@@ -793,11 +793,17 @@ object SymDenotations {
         case tpe: MethodicType => paramIsSpecialized(tpe.resultType)
         case _ => false
       }
+
+      def isPolyTypeWithNoHK(tp: Type): Boolean = tp match {
+        case tp: PolyType => !tp.paramInfos.exists(_.isHK)
+        case _ => false
+      }
+
       !this.name.toString.startsWith("$lessinit$greater") && // FIXME: issue in DerivedName on default parameters
       !owner.is(Scala2x) && !owner.is(JavaDefined) && (owner ne defn.AnyClass) && (owner ne defn.ObjectClass) && {
         if (ctx.settings.specializeAll.value) {
           (name ne nme.unapply) && (name ne nme.unapplySeq) &&
-          !isConstructor && info.widenDealias.isInstanceOf[PolyType]
+          !isConstructor && isPolyTypeWithNoHK(info.widenDealias)
         } else paramIsSpecialized(info)
       }
     }
