@@ -37,8 +37,6 @@ object Test {
   def SuccZipWith[R](zWith : ZipWith): ZipWith { type T = zWith.T } =
     new ZipWith { type T = zWith.T }
 
-  def mymap[S](f: T => S): Unit = f(null.asInstanceOf[T])
-
   def throws[U: Specialized](x: U): Unit = throw new StackCheck
 
   class StackCheck extends Throwable
@@ -89,4 +87,8 @@ class Ops {
 
 class ArrowAssoc[A](self: A) {
   def f[B: Specialized](y: B): A = self
+}
+
+class RichBuffer[T] {
+  def mymap[S](f: T => S): Unit = f(null.asInstanceOf[T])
 }

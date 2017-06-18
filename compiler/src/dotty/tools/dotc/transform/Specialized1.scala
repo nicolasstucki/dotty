@@ -24,12 +24,9 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   val specDefDefs: mutable.Map[Symbol, List[DefDef]] = mutable.Map.empty
   val specDefDefsInClass: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
 
-  private var specialized0Phase: Specialized0 = _
+  val needsSpecialization = mutable.Set.empty[(Symbol, OuterTargs)]
 
-  override def prepareForUnit(tree: tpd.Tree)(implicit ctx: Context): TreeTransforms.TreeTransform = {
-    specialized0Phase = ctx.phaseOfClass(classOf[Specialized0]).asInstanceOf[Specialized0]
-    super.prepareForUnit(tree)
-  }
+  private var specialized0Phase: Specialized0 = _
 
   override def transformTypeApply(tree: tpd.TypeApply)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
     getSpecializedSym(tree) // trigger creation of specialized function symbols and trees
@@ -47,7 +44,10 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     }
     val outerTargs = (sym :: allKnownOverwrites(sym)).foldLeft(qualOuterTargs)(tparamsAsOuterTargs)
     if (!sym.isSpecializable || !outerTargs.mp.contains(sym)) NoSymbol
-    else specializedMethod(sym, outerTargs)
+    else if (!sym.pos.exists) {
+      needsSpecialization += Tuple2(sym, outerTargs)
+      NoSymbol
+    } else specializedMethod(sym, outerTargs)
   }
 
   def localOuterTargs(tree: TypeApply)(implicit ctx: Context): OuterTargs = {
@@ -239,4 +239,16 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     val transformInnerCalls = new TreeTypeMap(treeMap = treeMap)
     transformInnerCalls.transform(specDefDef).asInstanceOf[DefDef]
   }
+
+  override def runOn(units: List[CompilationUnit])(implicit ctx: Context): List[CompilationUnit] = {
+    specialized0Phase = ctx.phaseOfClass(classOf[Specialized0]).asInstanceOf[Specialized0]
+
+    val units1 = super.runOn(units)
+    // TODO load compilation units based on needsSpecialization and super.runOn(loadedUnits)
+    ctx.log("Did not specialize: " + needsSpecialization)
+
+    units1
+  }
+
+
 }
