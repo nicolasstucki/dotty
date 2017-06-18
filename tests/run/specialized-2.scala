@@ -12,6 +12,7 @@ object Test {
     // new C(new L(1)).map(x => x) // FIXME
     SuccZipWith[Boolean](new ZipWith { type T = Int })
     new ArrowAssoc(1).f(2)
+    // new RichBuffer[Int].mymap(x => x) // FIXME
   }
 
   def foo1[T: Specialized](x: T) = {
@@ -35,6 +36,8 @@ object Test {
 
   def SuccZipWith[R](zWith : ZipWith): ZipWith { type T = zWith.T } =
     new ZipWith { type T = zWith.T }
+
+  def mymap[S](f: T => S): Unit = f(null.asInstanceOf[T])
 
   def throws[U: Specialized](x: U): Unit = throw new StackCheck
 
