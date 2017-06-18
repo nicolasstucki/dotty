@@ -9,7 +9,7 @@ import Symbols._
 import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Flags._
-import dotty.tools.dotc.linker.OuterTargs
+import dotty.tools.dotc.linker._
 
 class Specialized2 extends MiniPhaseTransform { thisTransformer =>
   import tpd._
@@ -63,17 +63,6 @@ class Specialized2 extends MiniPhaseTransform { thisTransformer =>
         if (sym.owner.isClass) sym.entered
       }
       Thicket(tree :: specTrees.map(x => transform(x)))
-    }
-  }
-
-  private final class SubstituteOuterTargs(outerTargs: OuterTargs)(implicit ctx: Context) extends DeepTypeMap {
-    override def apply(tp: Type): Type = tp match {
-      case RefinedType(parent, name, info) =>
-        outerTargs.mp.get(parent.classSymbol) match {
-          case Some(targMap) => RefinedType(parent, name, targMap.getOrElse(name, info))
-          case _ => mapOver(tp)
-        }
-      case _ => mapOver(tp)
     }
   }
 

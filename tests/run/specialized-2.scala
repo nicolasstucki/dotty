@@ -11,7 +11,7 @@ object Test {
     NIL2.prepend(1)
     // new C(new L(1)).map(x => x) // FIXME
     SuccZipWith[Boolean](new ZipWith { type T = Int })
-    // new ArrowAssoc(1).f(2) // FIXME
+    new ArrowAssoc(1).f(2)
   }
 
   def foo1[T: Specialized](x: T) = {

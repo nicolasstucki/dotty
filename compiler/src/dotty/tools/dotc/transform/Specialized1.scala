@@ -11,7 +11,7 @@ import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.ast.{TreeTypeMap, tpd}
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
-import dotty.tools.dotc.linker.OuterTargs
+import dotty.tools.dotc.linker._
 
 import scala.collection.mutable
 
@@ -90,7 +90,9 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
           }
         case _ => symInfo.paramInfos
       }
-      val specInfo = symInfo.derivedLambdaType(paramInfos = specParamInfos)
+      val subs = new SubstituteOuterTargs(outerTargs)
+      val specResType = subs(symInfo.resType)
+      val specInfo = symInfo.derivedLambdaType(paramInfos = specParamInfos, resType = specResType)
       val specSym = ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
       specSymbols.put(key, specSym)
       val specDefDef = createSpecializedDefDef(sym, specSym, outerTargs)
@@ -101,6 +103,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
         s"""specialized
           |  ${sym.show + sym.info.show} into
           |  ${specSym.show + specSym.info.show}
+          |  $outerTargs
         """.stripMargin)
       specSym
     }
