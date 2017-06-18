@@ -27,7 +27,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   private val specializedDefDefs: mutable.Map[Symbol, DefDef] = mutable.Map.empty
 
-  val needsSpecialization = mutable.Map.empty[Symbol, ListSet[OuterTargs]]
+  val needsSpecialization = mutable.Map.empty[Symbol, List[(OuterTargs, Context)]]
 
   private var allKnownOverwrites: mutable.Map[Symbol, List[Symbol]] = _
 
@@ -41,7 +41,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     needsSpecialization.get(sym) match {
       case Some(outerTargsList) =>
         specializedDefDefs.put(sym, tree)
-        outerTargsList.toArray.reverse.foreach(outerTargs => specializedMethod(sym, outerTargs)(ctx))
+        outerTargsList.toArray.reverse.foreach{case (outerTargs, ctx1) => specializedMethod(sym, outerTargs)(ctx1)}
         needsSpecialization.remove(sym)
       case _ =>
     }
@@ -123,7 +123,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       case Some(specSym) => specSym
       case None =>
         if (!specializedDefDefs.contains(sym)) {
-          needsSpecialization.put(sym, needsSpecialization.getOrElse(sym, ListSet.empty) + outerTargs)
+          needsSpecialization.put(sym, (outerTargs, ctx) :: needsSpecialization.getOrElse(sym, List.empty))
           NoSymbol
         } else {
           val specSym = newSpecializedMethod
