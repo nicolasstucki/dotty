@@ -95,7 +95,7 @@ class CompilationTests extends ParallelTesting {
     compileFilesInDir("../tests/pos", defaultOptions) +
     compileFilesInDir("../tests/pos-deep-subtype", allowDeepSubtypes) +
     // specialize test
-    //    compileFilesInDir("../tests/pos", defaultOptions :+ "-specializeAll") + // FIXME
+    compileFilesInDir("../tests/pos", defaultOptions :+ "-specializeAll") +
     compileFile("../tests/run/specialized-1.scala", defaultOptions :+ "-specializeAll" :+ "-specializedForAll") +
     compileFile("../tests/run/specialized-2.scala", defaultOptions :+ "-specializeAll" :+ "-specializedForAll") +
     //
