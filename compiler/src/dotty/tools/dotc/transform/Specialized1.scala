@@ -29,7 +29,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   val needsSpecialization = mutable.Map.empty[Symbol, ListSet[OuterTargs]]
 
-  private var specialized0Phase: Specialized0 = _
+  private var allKnownOverwrites: mutable.Map[Symbol, List[Symbol]] = _
 
   override def transformTypeApply(tree: tpd.TypeApply)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
     getSpecializedSym(tree) // trigger creation of specialized function symbols and trees
@@ -57,7 +57,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       val specializedTargs = specilizableTypeParams(s).map(i => (names(i), targs(i).widenDealias))
       acc.addAll(s, specializedTargs.filter(x => isSpecilizableType(x._2)))
     }
-    val outerTargs = (sym :: allKnownOverwrites(sym)).foldLeft(qualOuterTargs)(tparamsAsOuterTargs)
+    val outerTargs = (sym :: allKnownOverwrites.getOrElse(sym, Nil)).foldLeft(qualOuterTargs)(tparamsAsOuterTargs)
     if (!sym.isSpecializable || !outerTargs.mp.contains(sym)) NoSymbol
     else specializedMethod(sym, outerTargs)
   }
@@ -128,7 +128,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
         } else {
           val specSym = newSpecializedMethod
           // TODO move this out to getSpecializedSym
-          allKnownOverwrites(sym).foreach(s => specializedMethod(s, outerTargs))
+          allKnownOverwrites.getOrElse(sym, Nil).foreach(s => specializedMethod(s, outerTargs))
           specSym
         }
     }
@@ -144,9 +144,6 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     }
     boundNames.getOrElseUpdate((sym.name, outerTargs), makeNewName)
   }
-
-  private def allKnownOverwrites(sym: Symbol)(implicit ctx: Context): List[Symbol] =
-    specialized0Phase.specializedOverwrites.getOrElse(sym, Nil)
 
   private def registerDefDef(ddef: DefDef)(implicit ctx: Context): Unit =
     specializedDefDefs.put(ddef.symbol, ddef)
@@ -255,7 +252,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   }
 
   override def runOn(units: List[CompilationUnit])(implicit ctx: Context): List[CompilationUnit] = {
-    specialized0Phase = ctx.phaseOfClass(classOf[Specialized0]).asInstanceOf[Specialized0]
+    val specializedOverwrites = ctx.phaseOfClass(classOf[SpecializedOverwrites]).asInstanceOf[SpecializedOverwrites]
+    allKnownOverwrites = specializedOverwrites.allKnownOverwrites
 
     val units1 = super.runOn(units)
     // TODO load compilation units based on needsSpecialization and super.runOn(loadedUnits)

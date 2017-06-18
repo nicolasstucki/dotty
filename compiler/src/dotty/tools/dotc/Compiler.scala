@@ -50,7 +50,7 @@ class Compiler {
       List(new FirstTransform,      // Some transformations to put trees into a canonical form
            new CheckReentrant,      // Internal use only: Check that compiled program has no data races involving global vars
            new ElimJavaPackages),   // Eliminate syntactic references to Java packages
-      List(new Specialized0),
+      List(new SpecializedOverwrites),
       List(new Specialized1),
       List(new Specialized2),
       List(new CheckStatic,         // Check restrictions that apply to @static members
