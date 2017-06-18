@@ -13,6 +13,7 @@ import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.linker._
 
+import scala.collection.immutable.ListSet
 import scala.collection.mutable
 
 class Specialized1 extends MiniPhaseTransform { thisTransformer =>
@@ -24,12 +25,26 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   val specDefDefs: mutable.Map[Symbol, List[DefDef]] = mutable.Map.empty
   val specDefDefsInClass: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
 
-  val needsSpecialization = mutable.Set.empty[(Symbol, OuterTargs)]
+  private val specializedDefDefs: mutable.Map[Symbol, DefDef] = mutable.Map.empty
+
+  val needsSpecialization = mutable.Map.empty[Symbol, ListSet[OuterTargs]]
 
   private var specialized0Phase: Specialized0 = _
 
   override def transformTypeApply(tree: tpd.TypeApply)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
     getSpecializedSym(tree) // trigger creation of specialized function symbols and trees
+    tree
+  }
+
+  override def transformDefDef(tree: tpd.DefDef)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
+    val sym = tree.symbol
+    needsSpecialization.get(sym) match {
+      case Some(outerTargsList) =>
+        specializedDefDefs.put(sym, tree)
+        outerTargsList.toArray.reverse.foreach(outerTargs => specializedMethod(sym, outerTargs)(ctx))
+        needsSpecialization.remove(sym)
+      case _ =>
+    }
     tree
   }
 
@@ -44,10 +59,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     }
     val outerTargs = (sym :: allKnownOverwrites(sym)).foldLeft(qualOuterTargs)(tparamsAsOuterTargs)
     if (!sym.isSpecializable || !outerTargs.mp.contains(sym)) NoSymbol
-    else if (!sym.pos.exists) {
-      needsSpecialization += Tuple2(sym, outerTargs)
-      NoSymbol
-    } else specializedMethod(sym, outerTargs)
+    else specializedMethod(sym, outerTargs)
   }
 
   def localOuterTargs(tree: TypeApply)(implicit ctx: Context): OuterTargs = {
@@ -110,10 +122,15 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     specSymbols.get(key) match {
       case Some(specSym) => specSym
       case None =>
-        val specSym = newSpecializedMethod
-        // TODO move this out to getSpecializedSym
-        allKnownOverwrites(sym).foreach(s => specializedMethod(s, outerTargs))
-        specSym
+        if (!specializedDefDefs.contains(sym)) {
+          needsSpecialization.put(sym, needsSpecialization.getOrElse(sym, ListSet.empty) + outerTargs)
+          NoSymbol
+        } else {
+          val specSym = newSpecializedMethod
+          // TODO move this out to getSpecializedSym
+          allKnownOverwrites(sym).foreach(s => specializedMethod(s, outerTargs))
+          specSym
+        }
     }
   }
 
@@ -131,11 +148,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private def allKnownOverwrites(sym: Symbol)(implicit ctx: Context): List[Symbol] =
     specialized0Phase.specializedOverwrites.getOrElse(sym, Nil)
 
-  private def getDefDefOf(sym: Symbol)(implicit ctx: Context): DefDef =
-    specialized0Phase.specializedDefDefs(sym)
-
   private def registerDefDef(ddef: DefDef)(implicit ctx: Context): Unit =
-    specialized0Phase.specializedDefDefs.put(ddef.symbol, ddef)
+    specializedDefDefs.put(ddef.symbol, ddef)
 
   private def specilizableTypeParams(sym: Symbol)(implicit ctx: Context): List[Int] = {
     if (ctx.settings.specializeAll.value) sym.info.asInstanceOf[PolyType].paramNames.indices.toList
@@ -168,7 +182,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   }
 
   private def createSpecializedDefDef(oldSym: Symbol, specSym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context) = {
-    val ddef = getDefDefOf(oldSym)
+    val ddef = specializedDefDefs(oldSym)
     def rhsFn(tparams: List[Type])(vparamss: List[List[Tree]]) = {
       val transformTparams: Map[Symbol, Type] = ddef.tparams.map(_.symbol).zip(tparams).toMap
       val transformVparams: Map[Symbol, Tree] = (ddef.vparamss.flatten.map(_.symbol) zip vparamss.flatten).toMap
