@@ -33,6 +33,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private val specializedDefDefs: mutable.Map[Symbol, DefDef] = mutable.Map.empty
 
   private val needsSpecialization = mutable.Map.empty[Symbol, List[(OuterTargs, Context)]]
+  private val specializationFor = mutable.Map.empty[Symbol, List[(OuterTargs, Context)]]
 
   private var allKnownOverwrites: mutable.Map[Symbol, List[Symbol]] = _
 
@@ -46,9 +47,18 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     needsSpecialization.get(sym) match {
       case Some(outerTargsList) =>
         specializedDefDefs.put(sym, tree)
-        outerTargsList.toArray.reverse.foreach{case (outerTargs, ctx1) => specializedMethod(sym, outerTargs)(ctx1)}
+        val outerTargsList1 = outerTargsList
+        outerTargsList1.reverse.foreach { case (outerTargs, ctx1) => specializedMethod(sym, outerTargs)(ctx1) }
         needsSpecialization.remove(sym)
+        specializationFor.put(sym, outerTargsList1 ::: specializationFor.getOrElse(sym, List.empty))
       case _ =>
+    }
+    if (sym.isSpecializable) {
+      sym.allOverriddenSymbols.foreach { sym0 =>
+        specializationFor.getOrElse(sym0, Nil).foreach {
+           case (outerTargs, ctx1) => specializedMethod(sym, outerTargs)(ctx1)
+        }
+      }
     }
     tree
   }
@@ -133,6 +143,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
           NoSymbol
         } else {
           val specSym = newSpecializedMethod
+          specializationFor.put(sym, (outerTargs, ctx) :: specializationFor.getOrElse(sym, List.empty))
           allKnownOverwrites.getOrElse(sym, Nil).foreach(s => specializedMethod(s, outerTargs))
           specSym
         }
@@ -268,7 +279,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   override def runOn(units: List[CompilationUnit])(implicit ctx: Context): List[CompilationUnit] = {
     val transformedUnits = runOn(Nil, units)
     ctx.log("Specialize methods created: " + specSymbols.valuesIterator.toList)
-    ctx.log("Did not specialize: " + needsSpecialization.keys)
+    println("Did not specialize: " + needsSpecialization.keys)
     transformedUnits
   }
 
