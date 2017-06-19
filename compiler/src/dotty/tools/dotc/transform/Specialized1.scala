@@ -13,7 +13,6 @@ import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.linker._
 
-import scala.collection.immutable.ListSet
 import scala.collection.mutable
 
 class Specialized1 extends MiniPhaseTransform { thisTransformer =>
@@ -25,9 +24,11 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   val specDefDefs: mutable.Map[Symbol, List[DefDef]] = mutable.Map.empty
   val specDefDefsInClass: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
 
+  val outerTargsOf: mutable.Map[Symbol, OuterTargs] = mutable.Map.empty
+
   private val specializedDefDefs: mutable.Map[Symbol, DefDef] = mutable.Map.empty
 
-  val needsSpecialization = mutable.Map.empty[Symbol, List[(OuterTargs, Context)]]
+  private val needsSpecialization = mutable.Map.empty[Symbol, List[(OuterTargs, Context)]]
 
   private var allKnownOverwrites: mutable.Map[Symbol, List[Symbol]] = _
 
@@ -107,6 +108,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       val specInfo = symInfo.derivedLambdaType(paramInfos = specParamInfos, resType = specResType)
       val specSym = ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
       specSymbols.put(key, specSym)
+      outerTargsOf.put(specSym, outerTargs)
       val specDefDef = createSpecializedDefDef(sym, specSym, outerTargs)
       specDefDefs.put(sym, specDefDef :: specDefDefs.getOrElse(sym, Nil))
       if (sym.owner.isClass)
@@ -245,6 +247,15 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
             getSpecializedSym(tree) // trigger creation of specialized function symbols and trees
             tree
         }
+      case tree: TypeTree =>
+        outerTargsOf.get(specDefDef.symbol) match {
+          case Some(outerTargs) =>
+            val substMap = new SubstituteOuterTargs(outerTargs)
+            val newTpe = substMap(tree.tpe.widenDealias)
+            if (tree.tpe != newTpe) TypeTree(newTpe)
+            else tree
+          case None => tree
+        }
       case _ => tree
     }
     val transformInnerCalls = new TreeTypeMap(treeMap = treeMap)
@@ -257,7 +268,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
     val units1 = super.runOn(units)
     // TODO load compilation units based on needsSpecialization and super.runOn(loadedUnits)
-    ctx.log("Did not specialize: " + needsSpecialization)
+    ctx.log("Did not specialize: " + needsSpecialization.keys)
 
     units1
   }

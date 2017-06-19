@@ -9,10 +9,10 @@ object Test {
     foo4[Int]
     new CONS[Int](null).prepend[Int]
     NIL2.prepend(1)
-    // new C(new L(1)).map(x => x) // FIXME
+    new C(new L(1)).map(x => x)
     SuccZipWith[Boolean](new ZipWith { type T = Int })
     new ArrowAssoc(1).f(2)
-    // new RichBuffer[Int].mymap(x => x) // FIXME
+    new RichBuffer[Int].mymap(x => x)
   }
 
   def foo1[T: Specialized](x: T) = {
@@ -90,5 +90,5 @@ class ArrowAssoc[A](self: A) {
 }
 
 class RichBuffer[T] {
-  def mymap[S](f: T => S): Unit = f(null.asInstanceOf[T])
+  def mymap[S: Specialized](f: T => S): Unit = f(null.asInstanceOf[T])
 }

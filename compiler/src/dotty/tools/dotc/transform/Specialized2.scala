@@ -23,11 +23,9 @@ class Specialized2 extends MiniPhaseTransform { thisTransformer =>
     super.prepareForUnit(tree)
   }
 
-
   override def transformThis(tree: tpd.This)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
-    // TODO make improve way to get outerTargs
-    specialized1.specSymbols.find(_._2 == ctx.owner) match {
-      case Some(((_, outerTargs), _)) =>
+    specialized1.outerTargsOf.get(ctx.owner) match {
+      case Some(outerTargs) =>
         val substMap = new SubstituteOuterTargs(outerTargs)
         val newTpe = substMap(tree.tpe.widenDealias)
         if (tree.tpe <:< newTpe) tree
