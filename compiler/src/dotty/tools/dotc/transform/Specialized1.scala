@@ -12,6 +12,8 @@ import dotty.tools.dotc.ast.{TreeTypeMap, tpd}
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.linker._
+import dotty.tools.dotc.core.SymDenotations.ClassDenotation
+import dotty.tools.dotc.core.tasty.DottyUnpickler
 
 import scala.collection.mutable
 
@@ -19,6 +21,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   import tpd._
 
   override def phaseName = "specialized1"
+
+  override def runsAfterGroupsOf = Set(classOf[FirstTransform])
 
   val specSymbols: mutable.Map[(Symbol, OuterTargs), Symbol] = mutable.Map.empty
   val specDefDefs: mutable.Map[Symbol, List[DefDef]] = mutable.Map.empty
@@ -263,15 +267,39 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   }
 
   override def runOn(units: List[CompilationUnit])(implicit ctx: Context): List[CompilationUnit] = {
-    val specializedOverwrites = ctx.phaseOfClass(classOf[SpecializedOverwrites]).asInstanceOf[SpecializedOverwrites]
-    allKnownOverwrites = specializedOverwrites.allKnownOverwrites
-
-    val units1 = super.runOn(units)
-    // TODO load compilation units based on needsSpecialization and super.runOn(loadedUnits)
+    val transformedUnits = runOn(Nil, units)
+    ctx.log("Specialize methods created: " + specSymbols.valuesIterator.toList)
     ctx.log("Did not specialize: " + needsSpecialization.keys)
-
-    units1
+    transformedUnits
   }
 
+  private def runOn(processed: List[CompilationUnit], unprocessed: List[CompilationUnit])(implicit ctx: Context): List[CompilationUnit] = {
+    if (unprocessed.isEmpty) processed
+    else {
+      val specializedOverwrites = ctx.phaseOfClass(classOf[SpecializedOverwrites]).asInstanceOf[SpecializedOverwrites]
+      allKnownOverwrites = specializedOverwrites.allKnownOverwrites
+
+      val newProcessed = processed ::: super.runOn(unprocessed)
+
+      def loadCompilationUnits(clsd: ClassDenotation): List[CompilationUnit] = clsd.dottyUnpickler match {
+        case Some(unpickler: DottyUnpickler) =>
+          ctx.log("Loading compilation unit for: " + clsd)
+          List(FromTasty.compilationUnit(clsd, unpickler))
+        case _ => Nil
+      }
+
+      val topLevelClasses0 = needsSpecialization.keySet.map(x => x.topLevelClass.denot.asClass)
+      val topLevelClasses1 = topLevelClasses0.filter(x => !x.is(JavaDefined) && (x.symbol ne defn.ObjectClass))
+      val newUnits = topLevelClasses1.flatMap(loadCompilationUnits).filterNot(newProcessed.contains).toList
+
+      def firstTransform = ctx.phaseOfClass(classOf[FirstTransform]).asInstanceOf[FirstTransform]
+
+      val newUnitsTansformed =
+        if (newUnits.isEmpty) Nil
+        else runOn(firstTransform.runOn(newUnits))
+
+      runOn(newProcessed, newUnitsTansformed)
+    }
+  }
 
 }

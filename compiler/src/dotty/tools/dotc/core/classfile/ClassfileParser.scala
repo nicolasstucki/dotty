@@ -15,6 +15,7 @@ import scala.annotation.switch
 import typer.Checking.checkNonCyclic
 import io.AbstractFile
 import scala.util.control.NonFatal
+import tasty.DottyUnpickler
 
 object ClassfileParser {
   /** Marker trait for unpicklers that can be embedded in classfiles. */
@@ -179,6 +180,13 @@ class ClassfileParser(
         }
         sym.markAbsent()
       }
+    }
+
+    result match {
+      case result @ Some(_: DottyUnpickler) =>
+        classRoot.dottyUnpickler = result.asInstanceOf[Option[DottyUnpickler]]
+        moduleRoot.dottyUnpickler = result.asInstanceOf[Option[DottyUnpickler]]
+      case _ =>
     }
 
     // eager load java enum definitions for exhaustivity check of pattern match

@@ -17,6 +17,7 @@ class SpecializedOverwrites extends MiniPhaseTransform with SymTransformer { thi
   val allKnownOverwrites: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
 
   override def transformSym(sym: SymDenotations.SymDenotation)(implicit ctx: Context): SymDenotations.SymDenotation = {
+    // TODO check that this works across compilation units
     if (sym.is(Method) && sym.isSpecializable)
       sym.allOverriddenSymbols.foreach(s => allKnownOverwrites.put(s, sym.symbol :: allKnownOverwrites.getOrElse(s, Nil)))
     sym

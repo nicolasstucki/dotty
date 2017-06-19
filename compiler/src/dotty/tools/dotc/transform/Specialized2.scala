@@ -16,6 +16,8 @@ class Specialized2 extends MiniPhaseTransform { thisTransformer =>
 
   override def phaseName = "specialized2"
 
+  override def runsAfterGroupsOf = Set(classOf[Specialized1])
+
   private var specialized1: Specialized1 = _
 
   override def prepareForUnit(tree: tpd.Tree)(implicit ctx: Context): TreeTransforms.TreeTransform = {
