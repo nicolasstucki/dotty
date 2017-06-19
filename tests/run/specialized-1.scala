@@ -25,7 +25,7 @@ object Test {
     checkTrace(foo16(1), List("foo16$spec$1", "foo16_inner$spec$1", "throws$spec$2"))
     checkTrace(foo16(new A), List("foo16", "foo$spec$1", "throws$spec$2"))
     checkTrace(foo16(new B), List("foo16", "foo$spec$1", "throws2$spec$4"))
-    checkTrace(foo17_1(new B), List("foo17_1", "foo$spec$3", "throws2$spec$3"))
+    checkTrace(foo17_1(new B), List("foo17_1", "foo$spec$3", "throws2$spec$5"))
     checkTrace(foo17_2(new A), List("foo17_2", "foo$spec$2", "throws$spec$7"))
     checkTrace(foo18[true](), List("foo18$spec$1", "throws"))
     checkTrace(foo18[false](), List("foo18$spec$1", "throws"))

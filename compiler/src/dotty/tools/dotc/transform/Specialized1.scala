@@ -30,7 +30,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   val outerTargsOf: mutable.Map[Symbol, OuterTargs] = mutable.Map.empty
 
-  private val specializedDefDefs: mutable.Map[Symbol, DefDef] = mutable.Map.empty
+  private val defDefsOf: mutable.Map[Symbol, DefDef] = mutable.Map.empty
 
   private val needsSpecialization = mutable.Map.empty[Symbol, List[(OuterTargs, Context)]]
   private val specializationFor = mutable.Map.empty[Symbol, List[(OuterTargs, Context)]]
@@ -44,21 +44,21 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   override def transformDefDef(tree: tpd.DefDef)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
     val sym = tree.symbol
-    needsSpecialization.get(sym) match {
-      case Some(outerTargsList) =>
-        specializedDefDefs.put(sym, tree)
-        val outerTargsList1 = outerTargsList
-        outerTargsList1.reverse.foreach { case (outerTargs, ctx1) => specializedMethod(sym, outerTargs)(ctx1) }
-        needsSpecialization.remove(sym)
-        specializationFor.put(sym, outerTargsList1 ::: specializationFor.getOrElse(sym, List.empty))
-      case _ =>
-    }
     if (sym.isSpecializable) {
+      defDefsOf.put(sym, tree)
       sym.allOverriddenSymbols.foreach { sym0 =>
         specializationFor.getOrElse(sym0, Nil).foreach {
            case (outerTargs, ctx1) => specializedMethod(sym, outerTargs)(ctx1)
         }
       }
+    }
+    needsSpecialization.get(sym) match {
+      case Some(outerTargsList) =>
+        val outerTargsList1 = outerTargsList
+        outerTargsList1.reverse.foreach { case (outerTargs, ctx1) => specializedMethod(sym, outerTargs)(ctx1) }
+        needsSpecialization.remove(sym)
+        specializationFor.put(sym, outerTargsList1 ::: specializationFor.getOrElse(sym, List.empty))
+      case _ =>
     }
     tree
   }
@@ -66,13 +66,13 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   def getSpecializedSym(tree: TypeApply)(implicit ctx: Context): Symbol = {
     val sym = tree.symbol
     val targs = tree.args.map(_.tpe)
-    val qualOuterTargs = localOuterTargs(tree)
+    lazy val qualOuterTargs = localOuterTargs(tree)
     def tparamsAsOuterTargs(acc: OuterTargs, s: Symbol): OuterTargs = {
       val names = s.info.asInstanceOf[PolyType].paramNames
       val specializedTargs = specilizableTypeParams(s).map(i => (names(i), targs(i).widenDealias))
       acc.addAll(s, specializedTargs.filter(x => isSpecilizableType(x._2)))
     }
-    val outerTargs = (sym :: allKnownOverwrites.getOrElse(sym, Nil)).foldLeft(qualOuterTargs)(tparamsAsOuterTargs)
+    lazy val outerTargs = (sym :: allKnownOverwrites.getOrElse(sym, Nil)).foldLeft(qualOuterTargs)(tparamsAsOuterTargs)
     if (!sym.isSpecializable || !outerTargs.mp.contains(sym)) NoSymbol
     else specializedMethod(sym, outerTargs)
   }
@@ -138,7 +138,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     specSymbols.get(key) match {
       case Some(specSym) => specSym
       case None =>
-        if (!specializedDefDefs.contains(sym)) {
+        if (!defDefsOf.contains(sym)) {
           needsSpecialization.put(sym, (outerTargs, ctx) :: needsSpecialization.getOrElse(sym, List.empty))
           NoSymbol
         } else {
@@ -162,7 +162,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   }
 
   private def registerDefDef(ddef: DefDef)(implicit ctx: Context): Unit =
-    specializedDefDefs.put(ddef.symbol, ddef)
+    defDefsOf.put(ddef.symbol, ddef)
 
   private def specilizableTypeParams(sym: Symbol)(implicit ctx: Context): List[Int] = {
     if (ctx.settings.specializeAll.value) sym.info.asInstanceOf[PolyType].paramNames.indices.toList
@@ -195,7 +195,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   }
 
   private def createSpecializedDefDef(oldSym: Symbol, specSym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context) = {
-    val ddef = specializedDefDefs(oldSym)
+    val ddef = defDefsOf(oldSym)
     def rhsFn(tparams: List[Type])(vparamss: List[List[Tree]]) = {
       val transformTparams: Map[Symbol, Type] = ddef.tparams.map(_.symbol).zip(tparams).toMap
       val transformVparams: Map[Symbol, Tree] = (ddef.vparamss.flatten.map(_.symbol) zip vparamss.flatten).toMap
@@ -279,7 +279,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   override def runOn(units: List[CompilationUnit])(implicit ctx: Context): List[CompilationUnit] = {
     val transformedUnits = runOn(Nil, units)
     ctx.log("Specialize methods created: " + specSymbols.valuesIterator.toList)
-    println("Did not specialize: " + needsSpecialization.keys)
+    ctx.log("Did not specialize: " + needsSpecialization.keys)
     transformedUnits
   }
 
@@ -306,7 +306,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
       val newUnitsTansformed =
         if (newUnits.isEmpty) Nil
-        else runOn(firstTransform.runOn(newUnits))
+        else super.runOn(firstTransform.runOn(newUnits))
 
       runOn(newProcessed, newUnitsTansformed)
     }
