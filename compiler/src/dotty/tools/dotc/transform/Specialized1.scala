@@ -133,7 +133,6 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
           NoSymbol
         } else {
           val specSym = newSpecializedMethod
-          // TODO move this out to getSpecializedSym
           allKnownOverwrites.getOrElse(sym, Nil).foreach(s => specializedMethod(s, outerTargs))
           specSym
         }
