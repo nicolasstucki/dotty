@@ -48,7 +48,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       defDefsOf.put(sym, tree)
       sym.allOverriddenSymbols.foreach { sym0 =>
         specializationFor.getOrElse(sym0, Nil).foreach {
-           case (outerTargs, ctx1) => specializedMethod(sym, outerTargs)(ctx1)
+           case (outerTargs, ctx1) => specializedMethod(sym, outerTargs.changeParent(sym0, sym))(ctx1)
         }
       }
     }
@@ -65,14 +65,13 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   def getSpecializedSym(tree: TypeApply)(implicit ctx: Context): Symbol = {
     val sym = tree.symbol
-    val targs = tree.args.map(_.tpe)
-    lazy val qualOuterTargs = localOuterTargs(tree)
-    def tparamsAsOuterTargs(acc: OuterTargs, s: Symbol): OuterTargs = {
-      val names = s.info.asInstanceOf[PolyType].paramNames
-      val specializedTargs = specilizableTypeParams(s).map(i => (names(i), targs(i).widenDealias))
-      acc.addAll(s, specializedTargs.filter(x => isSpecilizableType(x._2)))
+    lazy val outerTargs = {
+      val targs = tree.args.map(_.tpe)
+      val qualOuterTargs = localOuterTargs(tree)
+      val names = sym.info.asInstanceOf[PolyType].paramNames
+      val specializedTargs = specilizableTypeParams(sym).map(i => (names(i), targs(i).widenDealias))
+      qualOuterTargs.addAll(sym, specializedTargs.filter(x => isSpecilizableType(x._2)))
     }
-    lazy val outerTargs = (sym :: allKnownOverwrites.getOrElse(sym, Nil)).foldLeft(qualOuterTargs)(tparamsAsOuterTargs)
     if (!sym.isSpecializable || !outerTargs.mp.contains(sym)) NoSymbol
     else specializedMethod(sym, outerTargs)
   }
@@ -105,6 +104,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   private def specializedMethod(sym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context): Symbol = {
     assert(sym.info.isInstanceOf[PolyType])
+    assert(outerTargs.mp.contains(sym))
     val key = (sym, outerTargs)
     def newSpecializedMethod = {
       val symInfo = sym.info.asInstanceOf[PolyType]
@@ -122,16 +122,17 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       val specInfo = symInfo.derivedLambdaType(paramInfos = specParamInfos, resType = specResType)
       val specSym = ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
       specSymbols.put(key, specSym)
-      outerTargsOf.put(specSym, outerTargs)
+      outerTargsOf.put(specSym, outerTargs.changeParent(sym, specSym))
       val specDefDef = createSpecializedDefDef(sym, specSym, outerTargs)
       specDefDefs.put(sym, specDefDef :: specDefDefs.getOrElse(sym, Nil))
       if (sym.owner.isClass)
         specDefDefsInClass.put(sym.owner, specSym :: specDefDefsInClass.getOrElse(sym.owner, Nil))
-      ctx.debuglog(
+      ctx.log(
         s"""specialized
-          |  ${sym.show + sym.info.show} into
+          |  ${sym.show + sym.info.show} in ${sym.owner.showFullName} into
           |  ${specSym.show + specSym.info.show}
           |  $outerTargs
+          |  ${outerTargs.mp.keys.map(_.showFullName)}
         """.stripMargin)
       specSym
     }
@@ -144,21 +145,24 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
         } else {
           val specSym = newSpecializedMethod
           specializationFor.put(sym, (outerTargs, ctx) :: specializationFor.getOrElse(sym, List.empty))
-          allKnownOverwrites.getOrElse(sym, Nil).foreach(s => specializedMethod(s, outerTargs))
+          allKnownOverwrites.getOrElse(sym, Nil).foreach(s => specializedMethod(s, outerTargs.changeParent(sym, s)))
           specSym
         }
     }
   }
 
-  private val boundNames = mutable.Map.empty[(Name, OuterTargs), Name]
+  private val boundNames = mutable.Map.empty[(Name, OuterTargs, Map[Name, Type]), Name]
   private val nameIdx = mutable.Map.empty[Name, Int]
   private def specializedNameSuffix(sym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context): Name = {
+    val targs = outerTargs.mp(sym)
+    val outerTargs1 = outerTargs.without(sym)
     def makeNewName = {
       val idx = nameIdx.getOrElse(sym.name, 0) + 1
       nameIdx.put(sym.name, idx)
       ("$spec$" + idx).toTermName
     }
-    boundNames.getOrElseUpdate((sym.name, outerTargs), makeNewName)
+
+    boundNames.getOrElseUpdate((sym.name, outerTargs1, targs), makeNewName)
   }
 
   private def registerDefDef(ddef: DefDef)(implicit ctx: Context): Unit =
@@ -238,10 +242,10 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     }
     trav.traverse(specDefDef)
 
-    transformSpecializedBody(specDefDef)
+    transformSpecializedDefDef(specDefDef, outerTargs)
   }
 
-  private def transformSpecializedBody(specDefDef: DefDef)(implicit ctx: Context): DefDef = {
+  private def transformSpecializedDefDef(specDefDef: DefDef, outerTargs: OuterTargs)(implicit ctx: Context): DefDef = {
     def treeMap(tree: Tree): Tree = tree match {
       case Match(sel, cases) =>
         val newCases = cases.filter {
@@ -261,25 +265,18 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
             getSpecializedSym(tree) // trigger creation of specialized function symbols and trees
             tree
         }
-      case tree: TypeTree =>
-        outerTargsOf.get(specDefDef.symbol) match {
-          case Some(outerTargs) =>
-            val substMap = new SubstituteOuterTargs(outerTargs)
-            val newTpe = substMap(tree.tpe.widenDealias)
-            if (tree.tpe != newTpe) TypeTree(newTpe)
-            else tree
-          case None => tree
-        }
       case _ => tree
     }
-    val transformInnerCalls = new TreeTypeMap(treeMap = treeMap)
+    val substMap = new SubstituteOuterTargs(outerTargs)
+    val transformInnerCalls = new TreeTypeMap(typeMap = substMap, treeMap = treeMap)
     transformInnerCalls.transform(specDefDef).asInstanceOf[DefDef]
   }
 
   override def runOn(units: List[CompilationUnit])(implicit ctx: Context): List[CompilationUnit] = {
     val transformedUnits = runOn(Nil, units)
-    ctx.log("Specialize methods created: " + specSymbols.valuesIterator.toList)
-    ctx.log("Did not specialize: " + needsSpecialization.keys)
+    ctx.log("Specialize methods created: " + specSymbols.valuesIterator.toList.map(_.showFullName))
+    ctx.log("Did not specialize: " + needsSpecialization.keys.map(_.showFullName))
+    ctx.log("Compilation units after phase: " + transformedUnits)
     transformedUnits
   }
 

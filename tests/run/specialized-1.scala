@@ -19,8 +19,8 @@ object Test {
     checkTrace(foo12(1), List("foo12$spec$3", "throws$spec$2"))
     checkTrace(foo13(new A), List("foo13", "foo$spec$1", "throws$spec$2"))
     checkTrace(foo13(new B), List("foo13", "foo$spec$1", "throws2$spec$4"))
-    // checkTrace(foo14(true, 2), List()) // FIXME: overload ambigouity
-    // checkTrace(foo14(1, false), List())
+    // checkTrace(foo14(true, 2), List("foo14$spec$1", "throws2$spec$1")) // FIXME: overload ambigouity
+    // checkTrace(foo14(1, false), List("foo14$spec$1", "throws$spec$1"))
     checkTrace(foo15(1), List("foo15$spec$1", "foo15_inner$spec$1$1", "throws$spec$2"))
     checkTrace(foo16(1), List("foo16$spec$1", "foo16_inner$spec$1", "throws$spec$2"))
     checkTrace(foo16(new A), List("foo16", "foo$spec$1", "throws$spec$2"))
@@ -118,7 +118,7 @@ object Test {
     throws(y)
   }
   def foo14[T: Specialized](x: T, y: Int) = {
-    throws(x)
+    throws2(x)
   }
 
   def foo15[T: Specialized](x: T) = {

@@ -34,5 +34,7 @@ final case class OuterTargs(/*val*/ mp: Map[Symbol, Map[Name, Type]]) /* extends
     new OuterTargs((mp - oldSym).updated(newSym, oldMap))
   }
 
+  def without(sym: Symbol): OuterTargs = new OuterTargs(mp - sym)
+
   override def toString: String = s"OuterTargs($mp)"
 }
