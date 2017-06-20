@@ -35,7 +35,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private val needsSpecialization = mutable.Map.empty[Symbol, List[(OuterTargs, Context)]]
   private val specializationFor = mutable.Map.empty[Symbol, List[(OuterTargs, Context)]]
 
-  private var allKnownOverwrites: mutable.Map[Symbol, List[Symbol]] = _
+  private val allKnownOverwrites: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
 
   override def transformTypeApply(tree: tpd.TypeApply)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
     getSpecializedSym(tree) // trigger creation of specialized function symbols and trees
@@ -47,6 +47,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     if (sym.isSpecializable) {
       defDefsOf.put(sym, tree)
       sym.allOverriddenSymbols.foreach { sym0 =>
+        allKnownOverwrites.put(sym0, sym.symbol :: allKnownOverwrites.getOrElse(sym0, Nil))
         specializationFor.getOrElse(sym0, Nil).foreach {
            case (outerTargs, ctx1) => specializedMethod(sym, outerTargs.changeParent(sym0, sym))(ctx1)
         }
@@ -292,9 +293,6 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private def runOn(processed: List[CompilationUnit], unprocessed: List[CompilationUnit])(implicit ctx: Context): List[CompilationUnit] = {
     if (unprocessed.isEmpty) processed
     else {
-      val specializedOverwrites = ctx.phaseOfClass(classOf[SpecializedOverwrites]).asInstanceOf[SpecializedOverwrites]
-      allKnownOverwrites = specializedOverwrites.allKnownOverwrites
-
       val newProcessed = processed ::: super.runOn(unprocessed)
 
       val topLevelClasses0 = needsSpecialization.keySet.map(x => x.topLevelClass.denot.asClass)

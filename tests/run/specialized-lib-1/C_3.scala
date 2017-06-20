@@ -5,6 +5,7 @@ object Test {
     checkTrace(B.foo(2), List("foo$spec$1", "throws$spec$1"))
     checkTrace(foo13(new A), List("foo13", "bar$spec$1", "throws$spec$1"))
     checkTrace(foo13(new B), List("foo13", "bar$spec$1", "throws2$spec$1"))
+    // checkTrace(foo13(new A2), List("foo13", "bar$spec$1", "baz$spec$1", "throws$spec$1")) // FIXME
   }
 
   def foo13(a: A) = {
