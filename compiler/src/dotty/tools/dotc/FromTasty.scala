@@ -92,4 +92,18 @@ object FromTasty extends Driver {
         }
     }
   }
+
+  def loadCompilationUnits(clsd: ClassDenotation)(implicit ctx: Context): Option[CompilationUnit] = clsd.dottyUnpickler.map { unpickler =>
+    ctx.log("Loading compilation unit for: " + clsd)
+    val List(unpickled) = unpickler.body(ctx.addMode(Mode.ReadPositions))
+    mkUnit(clsd, unpickled)
+  }
+
+  private def mkUnit(clsd: ClassDenotation, unpickled: Tree)(implicit ctx: Context): CompilationUnit = {
+    val unit1 = new CompilationUnit(new SourceFile(clsd.symbol.sourceFile, Seq()))
+    unit1.tpdTree = unpickled
+    force.traverse(unit1.tpdTree)
+    unit1
+  }
+
 }

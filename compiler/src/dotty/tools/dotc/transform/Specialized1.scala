@@ -63,6 +63,12 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     tree
   }
 
+  /** Get the symbol of the specialized version of this type application.
+   *
+   *  If the DefDef is not specializable or DefDef has not been seen yet, NoSymbol is returned.
+   *  In the later case the request for specialization is registered and processed when the DefDef
+   *  is reached (maybe in another compilation unit).
+   */
   def getSpecializedSym(tree: TypeApply)(implicit ctx: Context): Symbol = {
     val sym = tree.symbol
     lazy val outerTargs = {
@@ -76,6 +82,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     else specializedMethod(sym, outerTargs)
   }
 
+  /** Compute the type arguments of the type applications agregated with the local type arguments of the prefix */
   def localOuterTargs(tree: TypeApply)(implicit ctx: Context): OuterTargs = {
     val sym = tree.symbol
     val targs = tree.args.map(_.tpe)
@@ -102,6 +109,11 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     case _ => acc
   }
 
+  /** Get the symbol of the specialized version of this type application.
+   *
+   *  If the DefDef has not been seen yet NoSymbol is returned. In this case a request for specialization
+   *  is registered and processed when the DefDef is reached (maybe in another compilation unit).
+   */
   private def specializedMethod(sym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context): Symbol = {
     assert(sym.info.isInstanceOf[PolyType])
     assert(outerTargs.mp.contains(sym))
@@ -122,7 +134,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       val specInfo = symInfo.derivedLambdaType(paramInfos = specParamInfos, resType = specResType)
       val specSym = ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
       specSymbols.put(key, specSym)
-      outerTargsOf.put(specSym, outerTargs.changeParent(sym, specSym))
+      outerTargsOf.put(specSym, outerTargs.without(sym))
       val specDefDef = createSpecializedDefDef(sym, specSym, outerTargs)
       specDefDefs.put(sym, specDefDef :: specDefDefs.getOrElse(sym, Nil))
       if (sym.owner.isClass)
@@ -288,16 +300,9 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
       val newProcessed = processed ::: super.runOn(unprocessed)
 
-      def loadCompilationUnits(clsd: ClassDenotation): List[CompilationUnit] = clsd.dottyUnpickler match {
-        case Some(unpickler: DottyUnpickler) =>
-          ctx.log("Loading compilation unit for: " + clsd)
-          List(FromTasty.compilationUnit(clsd, unpickler))
-        case _ => Nil
-      }
-
       val topLevelClasses0 = needsSpecialization.keySet.map(x => x.topLevelClass.denot.asClass)
       val topLevelClasses1 = topLevelClasses0.filter(x => !x.is(JavaDefined) && (x.symbol ne defn.ObjectClass))
-      val newUnits = topLevelClasses1.flatMap(loadCompilationUnits).filterNot(newProcessed.contains).toList
+      val newUnits = topLevelClasses1.flatMap(FromTasty.loadCompilationUnits).filterNot(newProcessed.contains).toList
 
       def firstTransform = ctx.phaseOfClass(classOf[FirstTransform]).asInstanceOf[FirstTransform]
 
