@@ -177,9 +177,6 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     boundNames.getOrElseUpdate((sym.name, outerTargs1, targs), makeNewName)
   }
 
-  private def registerDefDef(ddef: DefDef)(implicit ctx: Context): Unit =
-    defDefsOf.put(ddef.symbol, ddef)
-
   private def specilizableTypeParams(sym: Symbol)(implicit ctx: Context): List[Int] = {
     if (ctx.settings.specializeAll.value) sym.info.asInstanceOf[PolyType].paramNames.indices.toList
     else {
@@ -246,7 +243,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       override def traverse(tree: tpd.Tree)(implicit ctx: Context): Unit = {
         assert(!tree.symbol.exists || tree.symbol.owner != ddef.symbol, tree)
         tree match {
-          case tree: DefDef if tree.symbol.isSpecializable => registerDefDef(tree)
+          case tree: DefDef if tree.symbol.isSpecializable => defDefsOf.put(tree.symbol, tree)
           case _ =>
         }
         traverseChildren(tree)
