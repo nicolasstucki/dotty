@@ -1,3 +1,5 @@
+import scala.collection.mutable.ArrayBuffer
+
 object Test {
   def main(args: Array[String]): Unit = {
     checkTrace(foo1(2), List("foo1$spec$1", "apply", "$anonfun$2", "throws$spec$1"))
@@ -13,6 +15,7 @@ object Test {
     SuccZipWith[Boolean](new ZipWith { type T = Int })
     new ArrowAssoc(1).f(2)
     new RichBuffer[Int].mymap(x => x)
+    // new RichBuffer2[Int](new ArrayBuffer[Int]).mymap[Int](x => x) // FIXME
   }
 
   def foo1[T: Specialized](x: T) = {
@@ -91,4 +94,10 @@ class ArrowAssoc[A](self: A) {
 
 class RichBuffer[T] {
   def mymap[S: Specialized](f: T => S): Unit = f(null.asInstanceOf[T])
+}
+
+class RichBuffer2[T](buffer: ArrayBuffer[T]) {
+  def mymap[S: Specialized](f: T => S): Unit = {
+    buffer.foreach { e => f(e) }
+  }
 }
