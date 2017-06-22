@@ -12,6 +12,7 @@ import dotty.tools.dotc.ast.{TreeTypeMap, tpd}
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.linker._
+import dotty.tools.dotc.transform.specialize.{SymbolSpecialization, TreeSpecialization}
 
 import scala.collection.mutable
 
@@ -32,6 +33,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   private val specializationFor = mutable.Map.empty[Symbol, List[(OuterTargs, Context)]]
 
   private val allKnownOverwrites: mutable.Map[Symbol, List[Symbol]] = mutable.Map.empty
+
+  private val symSpecializer = new SymbolSpecialization
 
   override def transformTypeApply(tree: tpd.TypeApply)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
     getSpecializedSym(tree) // trigger creation of specialized function symbols and trees
@@ -116,23 +119,23 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     assert(outerTargs.mp.contains(sym))
     val key = (sym, outerTargs)
     def newSpecializedMethod = {
-      val symInfo = sym.info.asInstanceOf[PolyType]
-      val specName = sym.name ++ specializedNameSuffix(sym, outerTargs)
-      val specFlags = sym.flags | Synthetic
-      val specParamInfos: List[TypeBounds] = outerTargs.mp.get(sym) match {
-        case Some(thisSpecial) =>
-          symInfo.paramInfos.zipWithConserve (symInfo.paramNames) {
-            case (info, name) => thisSpecial.get (name).map (tp => TypeAlias (tp) ).getOrElse(info)
-          }
-        case _ => symInfo.paramInfos
-      }
-      val subs = new SubstituteOuterTargs(outerTargs)
-      val specResType = subs(symInfo.resType)
-      val specInfo = symInfo.derivedLambdaType(paramInfos = specParamInfos, resType = specResType)
-      val specSym = ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
+      val specSym = symSpecializer.specializedDefSymbol(sym, outerTargs)
       specSymbols.put(key, specSym)
       outerTargsOf.put(specSym, outerTargs.without(sym))
-      val specDefDef = createSpecializedDefDef(sym, specSym, outerTargs)
+      val specDefDef = TreeSpecialization.specializedDefDef(defDefsOf(sym), specSym, outerTargs)
+
+      val trav = new TreeTraverser {
+        override def traverse(tree: tpd.Tree)(implicit ctx: Context): Unit = {
+          tree match {
+            case tree: DefDef if tree.symbol.isSpecializable => defDefsOf.put(tree.symbol, tree)
+            case tree: TypeApply => getSpecializedSym(tree)
+            case _ =>
+          }
+          traverseChildren(tree)
+        }
+      }
+      trav.traverse(specDefDef)
+
       specDefDefs.put(sym, specDefDef :: specDefDefs.getOrElse(sym, Nil))
       if (sym.owner.isClass)
         specDefDefsInClass.put(sym.owner, specSym :: specDefDefsInClass.getOrElse(sym.owner, Nil))
@@ -158,20 +161,6 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
           specSym
         }
     }
-  }
-
-  private val boundNames = mutable.Map.empty[(Name, OuterTargs, Map[Name, Type]), Name]
-  private val nameIdx = mutable.Map.empty[Name, Int]
-  private def specializedNameSuffix(sym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context): Name = {
-    val targs = outerTargs.mp(sym)
-    val outerTargs1 = outerTargs.without(sym)
-    def makeNewName = {
-      val idx = nameIdx.getOrElse(sym.name, 0) + 1
-      nameIdx.put(sym.name, idx)
-      ("$spec$" + idx).toTermName
-    }
-
-    boundNames.getOrElseUpdate((sym.name, outerTargs1, targs), makeNewName)
   }
 
   private def specilizableTypeParams(sym: Symbol)(implicit ctx: Context): List[Int] = {
@@ -204,83 +193,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     tpe.widenDealias.classSymbol.isValueClass
   }
 
-  private def createSpecializedDefDef(oldSym: Symbol, specSym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context) = {
-    val ddef = defDefsOf(oldSym)
-    def rhsFn(tparams: List[Type])(vparamss: List[List[Tree]]) = {
-      val transformTparams: Map[Symbol, Type] = ddef.tparams.map(_.symbol).zip(tparams).toMap
-      val transformVparams: Map[Symbol, Tree] = (ddef.vparamss.flatten.map(_.symbol) zip vparamss.flatten).toMap
-
-      // Transform references to types
-      val typeMap = new TypeMap() {
-        override def apply(tp: Type): Type = tp match {
-          case tp: TypeRef if tp.typeSymbol.owner == oldSym && tp.typeSymbol.is(Param) =>
-            transformTparams.getOrElse(tp.typeSymbol, tp)
-          case tp: TermRef if tp.termSymbol.owner == oldSym && tp.termSymbol.is(Param) =>
-            transformVparams.get(tp.termSymbol).map(_.symbol.termRef).getOrElse(tp)
-          case _ => mapOver(tp)
-        }
-      }
-
-      // Transform references to terms
-      def treeMap(tree: Tree): Tree = tree match {
-        case tree: Ident if tree.symbol.isTerm && tree.symbol.is(Param) && tree.symbol.owner == oldSym =>
-          transformVparams(tree.symbol)
-        case Return(expr, from) if from.symbol == oldSym => Return(expr, ref(specSym))
-        case _ => tree
-      }
-
-      // Apply transforms
-      val treeTypeMap = new TreeTypeMap(typeMap, treeMap, oldSym :: Nil, specSym :: Nil)
-      treeTypeMap.transform(ddef.rhs)
-    }
-
-    val specDefDef = polyDefDef(specSym.asTerm, rhsFn)
-
-    val trav = new TreeTraverser {
-      override def traverse(tree: tpd.Tree)(implicit ctx: Context): Unit = {
-        assert(!tree.symbol.exists || tree.symbol.owner != ddef.symbol, tree)
-        tree match {
-          case tree: DefDef if tree.symbol.isSpecializable => defDefsOf.put(tree.symbol, tree)
-          case _ =>
-        }
-        traverseChildren(tree)
-      }
-    }
-    trav.traverse(specDefDef)
-
-    transformSpecializedDefDef(specDefDef, outerTargs)
-  }
-
-  private def transformSpecializedDefDef(specDefDef: DefDef, outerTargs: OuterTargs)(implicit ctx: Context): DefDef = {
-    def treeMap(tree: Tree): Tree = tree match {
-      case Match(sel, cases) =>
-        val newCases = cases.filter {
-          case CaseDef(Bind(_, Typed(_, tp)), _, _) => sel.tpe <:< tp.tpe
-          // TODO: other patterns?
-          case _ => true
-        }
-        if (newCases.isEmpty) Throw(New(defn.MatchErrorType, List(ref(sel.symbol))))
-        else cpy.Match(tree)(sel, newCases)
-      case tree @ TypeApply(fun, args) =>
-        fun match {
-          case Select(qual, _) if fun.symbol == defn.Any_isInstanceOf =>
-            if (qual.tpe <:< args.head.tpe) Literal(Constants.Constant(true))
-            else if (!(args.head.tpe <:< qual.tpe)) Literal(Constants.Constant(false))
-            else tree
-          case _ =>
-            getSpecializedSym(tree) // trigger creation of specialized function symbols and trees
-            tree
-        }
-      case _ => tree
-    }
-    val substMap = new SubstituteOuterTargs(outerTargs)
-    val transformInnerCalls = new TreeTypeMap(typeMap = substMap, treeMap = treeMap)
-    transformInnerCalls.transform(specDefDef).asInstanceOf[DefDef]
-  }
-
   override def runOn(units: List[CompilationUnit])(implicit ctx: Context): List[CompilationUnit] = {
-    val specializedOverwrites = ctx.phaseOfClass(classOf[SpecializedOverwrites]).asInstanceOf[SpecializedOverwrites]
-    allKnownOverwrites = specializedOverwrites.allKnownOverwrites
 
     val units1 = super.runOn(units)
     // TODO load compilation units based on needsSpecialization and super.runOn(loadedUnits)
@@ -288,6 +201,5 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
     units1
   }
-
 
 }
