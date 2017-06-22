@@ -1,38 +1,48 @@
 object Test {
   def main(args: Array[String]): Unit = {
+    val throwInt = "throws$spec$1"
+    val throwInt2 = "throws$spec$2"
+    val throw2Int = "throws2$spec$3"
+    val throw2Long = "throws2$spec$5"
+    val throwDouble = "throws$spec$7"
+    val throwBoolean = "throws$spec$6"
+    val throw2Boolean = "throws2$spec$2"
+    val throwA = "throws$spec$1"
+    val throwVC = "throws$spec$4"
+    val throwVC2 = "throws$spec$5"
     checkTrace(foo1[Int](), List("foo1$spec$1", "throws"))
-    checkTrace(foo2[Int](1), List("foo2$spec$1", "throws$spec$1"))
-    checkTrace(foo3(1), List("foo3$spec$1", "throws$spec$2"))
+    checkTrace(foo2[Int](1), List("foo2$spec$1", throwInt))
+    checkTrace(foo3(1), List("foo3$spec$1", throwInt2))
     checkTrace(foo3("abc"), List("foo3", "throws"))
-    checkTrace(foo4(1, 0.2), List("foo4$spec$1", "throws$spec$2"))
+    checkTrace(foo4(1, 0.2), List("foo4$spec$1", throwInt2))
     checkTrace(foo5(1, 0.2), List("foo5$spec$1", "throws"))
-    checkTrace(foo6(1, true), List("foo6$spec$1", "throws$spec$2"))
-    checkTrace(foo7(1, true), List("foo7$spec$1", "foo7$spec$1", "throws$spec$2"))
-    checkTrace(foo8(1), List("foo8$spec$1", "foo8_2$2", "throws$spec$2"))
-    checkTrace(foo9(1, false), List("foo9$spec$1", "throws$spec$2"))
-    checkTrace(foo10(1), List("foo10$spec$1", "throws$spec$1"))
+    checkTrace(foo6(1, true), List("foo6$spec$1", throwInt2))
+    checkTrace(foo7(1, true), List("foo7$spec$1", "foo7$spec$1", throwInt2))
+    checkTrace(foo8(1), List("foo8$spec$1", "foo8_2$2", throwInt2))
+    checkTrace(foo9(1, false), List("foo9$spec$1", throwInt2))
+    checkTrace(foo10(1), List("foo10$spec$1", throwInt))
     checkTrace(foo10("abc"), List("foo10", "throws"))
-    checkTrace(foo10(new Object), List("foo10", "throws$spec$2"))
+    checkTrace(foo10(new Object), List("foo10", throwInt2))
     foo11(1)
-    checkTrace(foo12(new VC(1)), List("foo12$spec$1", "throws$spec$3"))
-    checkTrace(foo12(new VC2(1)), List("foo12$spec$2", "throws$spec$4"))
-    checkTrace(foo12(1), List("foo12$spec$3", "throws$spec$2"))
-    checkTrace(foo13(new A), List("foo13", "foo$spec$1", "throws$spec$2"))
-    checkTrace(foo13(new B), List("foo13", "foo$spec$1", "throws2$spec$4"))
+    checkTrace(foo12(new VC(1)), List("foo12$spec$1", throwVC))
+    checkTrace(foo12(new VC2(1)), List("foo12$spec$2", throwVC2))
+    checkTrace(foo12(1), List("foo12$spec$3", throwInt2))
+    checkTrace(foo13(new A), List("foo13", "foo$spec$1", throwInt2))
+    checkTrace(foo13(new B), List("foo13", "foo$spec$1", throw2Int))
     // checkTrace(foo14(true, 2), List("foo14$spec$1", "throws2$spec$1")) // FIXME: overload ambigouity
-    // checkTrace(foo14(1, false), List("foo14$spec$1", "throws$spec$1"))
-    checkTrace(foo15(1), List("foo15$spec$1", "foo15_inner$spec$1$1", "throws$spec$2"))
-    checkTrace(foo16(1), List("foo16$spec$1", "foo16_inner$spec$1", "throws$spec$2"))
-    checkTrace(foo16(new A), List("foo16", "foo$spec$1", "throws$spec$2"))
-    checkTrace(foo16(new B), List("foo16", "foo$spec$1", "throws2$spec$4"))
-    checkTrace(foo17_1(new B), List("foo17_1", "foo$spec$3", "throws2$spec$5"))
-    checkTrace(foo17_2(new A), List("foo17_2", "foo$spec$2", "throws$spec$7"))
+    // checkTrace(foo14(1, false), List("foo14$spec$1", throwInt))
+    checkTrace(foo15(1), List("foo15$spec$1", "foo15_inner$spec$1$1", throwInt2))
+    checkTrace(foo16(1), List("foo16$spec$1", "foo16_inner$spec$1", throwInt2))
+    checkTrace(foo16(new A), List("foo16", "foo$spec$1", throwInt2))
+    checkTrace(foo16(new B), List("foo16", "foo$spec$1", throw2Int))
+    checkTrace(foo17_1(new B), List("foo17_1", "foo$spec$3", throw2Long))
+    checkTrace(foo17_2(new A), List("foo17_2", "foo$spec$2", throwDouble))
     checkTrace(foo18[true](), List("foo18$spec$1", "throws"))
     checkTrace(foo18[false](), List("foo18$spec$1", "throws"))
-    checkTrace(foo19[true](true), List("foo19$spec$1", "throws$spec$6"))
-    checkTrace(foo19[false](false), List("foo19$spec$1", "throws2$spec$2"))
+    checkTrace(foo19[true](true), List("foo19$spec$1", throwBoolean))
+    checkTrace(foo19[false](false), List("foo19$spec$1", throw2Boolean))
     val a = new A()
-    checkTrace(a.foo(1), List("foo$spec$1", "throws$spec$2"))
+    checkTrace(a.foo(1), List("foo$spec$1", throwInt2))
   }
 
   def foo1[T: Specialized]() = {

@@ -24,7 +24,7 @@ class Specialized2 extends MiniPhaseTransform { thisTransformer =>
   }
 
   override def transformThis(tree: tpd.This)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
-    specialized1.outerTargsOf.get(ctx.owner) match {
+    specialized1.getOuterTargsOf(ctx.owner) match {
       case Some(outerTargs) =>
         val substMap = new SubstituteOuterTargs(outerTargs)
         val newTpe = substMap(tree.tpe.widenDealias)
