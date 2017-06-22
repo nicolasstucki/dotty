@@ -28,7 +28,7 @@ class SymbolSpecialization {
     }
     val subs = new SubstituteOuterTargs(outerTargs)
     val specResType = subs(symInfo.resType)
-    val specInfo = symInfo.derivedLambdaType(paramInfos = specParamInfos, resType = specResType)
+    val specInfo = symInfo.newLikeThis(symInfo.paramNames, specParamInfos, specResType)
     ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
   }
 
