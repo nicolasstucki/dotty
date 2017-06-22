@@ -2,7 +2,7 @@ package dotty.tools.dotc
 package transform
 
 import core._
-import dotty.tools.dotc.transform.TreeTransforms.{MiniPhaseTransform, TransformerInfo}
+import dotty.tools.dotc.transform.TreeTransforms._
 import Types._
 import Contexts.Context
 import Symbols._
@@ -12,7 +12,8 @@ import dotty.tools.dotc.ast.{TreeTypeMap, tpd}
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names._
 import dotty.tools.dotc.linker._
-import dotty.tools.dotc.core.SymDenotations.ClassDenotation
+import dotty.tools.dotc.core.Denotations._
+import dotty.tools.dotc.core.SymDenotations._
 import dotty.tools.dotc.core.tasty.DottyUnpickler
 
 import scala.collection.mutable
@@ -140,7 +141,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
       specDefDefs.put(sym, specDefDef :: specDefDefs.getOrElse(sym, Nil))
       if (sym.owner.isClass)
         specDefDefsInClass.put(sym.owner, specSym :: specDefDefsInClass.getOrElse(sym.owner, Nil))
-      ctx.log(
+      println(
         s"""specialized
           |  ${sym.show + sym.info.show} in ${sym.owner.showFullName} into
           |  ${specSym.show + specSym.info.show}
@@ -283,11 +284,21 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
   }
 
   override def runOn(units: List[CompilationUnit])(implicit ctx: Context): List[CompilationUnit] = {
-    val transformedUnits = runOn(Nil, units)
-    ctx.log("Specialize methods created: " + specSymbols.valuesIterator.toList.map(_.showFullName))
-    ctx.log("Did not specialize: " + needsSpecialization.keys.map(_.showFullName))
-    ctx.log("Compilation units after phase: " + transformedUnits)
-    transformedUnits
+    println()
+    println("runOn start")
+          def allKnown = ctx.phaseOfClass(classOf[AllKnown]).asInstanceOf[AllKnown]
+
+      println("allKnown.toLoad: " + allKnown.toLoad)
+    val s = super.runOn(units)
+      println("allKnown.toLoad: " + allKnown.toLoad)
+    println("runOn end")
+    println()
+    s
+    // val transformedUnits = runOn(Nil, units)
+    // println("Specialize methods created: " + specSymbols.valuesIterator.toList.map(_.showFullName))
+    // println("Did not specialize: " + needsSpecialization.keys.map(_.showFullName))
+    // println("Compilation units after phase: " + transformedUnits)
+    // transformedUnits
   }
 
   private def runOn(processed: List[CompilationUnit], unprocessed: List[CompilationUnit])(implicit ctx: Context): List[CompilationUnit] = {
@@ -295,17 +306,51 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     else {
       val newProcessed = processed ::: super.runOn(unprocessed)
 
+      def firstTransform = ctx.phaseOfClass(classOf[FirstTransform]).asInstanceOf[FirstTransform]
+      def allKnown = ctx.phaseOfClass(classOf[AllKnown]).asInstanceOf[AllKnown]
+
       val topLevelClasses0 = needsSpecialization.keySet.map(x => x.topLevelClass.denot.asClass)
       val topLevelClasses1 = topLevelClasses0.filter(x => !x.is(JavaDefined) && (x.symbol ne defn.ObjectClass))
-      val newUnits = topLevelClasses1.flatMap(FromTasty.loadCompilationUnits).filterNot(newProcessed.contains).toList
+      val newUnits = allKnown.toLoad.flatMap(FromTasty.loadCompilationUnits).filterNot(newProcessed.contains).toList
+      println("topLevelClasses1: " + topLevelClasses1)
+      println("allKnown.toLoad: " + allKnown.toLoad)
+      println("newUnits: " + newUnits)
 
-      def firstTransform = ctx.phaseOfClass(classOf[FirstTransform]).asInstanceOf[FirstTransform]
-
+      allKnown.toLoad.clear()
       val newUnitsTansformed =
         if (newUnits.isEmpty) Nil
-        else super.runOn(firstTransform.runOn(newUnits))
+        else firstTransform.runOn(newUnits)
 
       runOn(newProcessed, newUnitsTansformed)
+    }
+  }
+
+}
+
+class AllKnown extends MiniPhaseTransform with DenotTransformers.SymTransformer { thisTransformer =>
+  import tpd._
+
+  override def phaseName = "allKnown"
+
+  val toLoad = mutable.Set.empty[ClassDenotation]
+
+  def transformSym(sym: SymDenotation)(implicit ctx: Context): SymDenotation = {
+    if (sym.isClass && !sym.is(Scala2x) && !sym.is(JavaDefined) && (sym.symbol ne defn.ObjectClass) && !defn.syntheticScalaClasses.contains(sym.symbol))
+      register(sym.symbol)
+    sym
+  }
+
+  override def transformNew(tree: tpd.New)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
+    tree.tpt.tpe.classSymbol // force symbol
+    tree
+  }
+
+
+  private def register(sym: Symbol)(implicit ctx: Context): Unit = {
+    val clsd = sym.topLevelClass.denot.asClass
+    if (clsd.symbol.isClass && !clsd.is(JavaDefined) && (clsd.symbol ne defn.ObjectClass) && !clsd.is(Module)) {
+      println("> " + clsd)
+      toLoad += sym.topLevelClass.denot.asClass
     }
   }
 

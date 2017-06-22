@@ -10,9 +10,9 @@ import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.SymDenotations.ClassDenotation
 import dotty.tools.dotc.core.Symbols._
 
-class CompilationUnit(val source: SourceFile) {
+case class CompilationUnit(source: SourceFile, name: String = "") {
 
-  override def toString = source.toString
+  override def toString = source.toString + "\n" + tpdTree
 
   var untpdTree: untpd.Tree = untpd.EmptyTree
 
