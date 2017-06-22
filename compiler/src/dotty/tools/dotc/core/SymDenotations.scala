@@ -18,8 +18,8 @@ import util.Stats
 import java.util.WeakHashMap
 import config.Config
 import config.Printers.{incremental, noPrinter}
+import config.Printers.{incremental, noPrinter}
 import reporting.trace
-import dotty.tools.dotc.core.tasty.DottyUnpickler
 
 trait SymDenotations { this: Context =>
   import SymDenotations._
@@ -1258,8 +1258,6 @@ object SymDenotations {
      */
     override def transformAfter(phase: DenotTransformer, f: SymDenotation => SymDenotation)(implicit ctx: Context): Unit =
       super.transformAfter(phase, f)
-
-    private[dotc] var dottyUnpickler: Option[DottyUnpickler] = None
 
     /** If denotation is private, remove the Private flag and expand the name if necessary */
     def ensureNotPrivate(implicit ctx: Context) =

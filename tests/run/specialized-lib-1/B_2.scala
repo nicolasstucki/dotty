@@ -1,11 +1,20 @@
-object B {
 
-  def foo[T: Specialized](x: T) = A.throws(x)
+object Test {
 
-  def throws2[U: Specialized](x: U): Unit = throw new StackCheck
+  def main(args: Array[String]): Unit = {
+    // FIXME
+    // checkTrace(A.foo(2), List())
+  }
 
-}
-
-class B extends A {
-  override def bar[T: Specialized](x: T): Unit = B.throws2(x)
+  def checkTrace[Thunk](thunk: => Thunk, expectedTrace: List[String]): Unit = {
+    try {
+      thunk
+    } catch {
+      case sc: StackCheck =>
+        val trace = sc.getStackTrace().toList.takeWhile(!_.getMethodName.startsWith("main")).map(_.getMethodName).reverse
+        val traceFmt = trace.map(x => "\"" + x + "\"")
+        val expectedTraceFmt = expectedTrace.map(x => "\"" + x + "\"")
+        assert(trace == expectedTrace, s"expected $expectedTraceFmt but was $traceFmt")
+    }
+  }
 }
