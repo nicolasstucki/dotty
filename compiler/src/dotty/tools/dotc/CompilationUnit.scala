@@ -12,7 +12,7 @@ import dotty.tools.dotc.core.Symbols._
 
 case class CompilationUnit(source: SourceFile, name: String = "") {
 
-  override def toString = source.toString + "\n" + tpdTree
+  override def toString = source.toString
 
   var untpdTree: untpd.Tree = untpd.EmptyTree
 

@@ -44,7 +44,7 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   override def transformDefDef(tree: tpd.DefDef)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
     val sym = tree.symbol
-    if (sym.isSpecializable) {
+    if (sym.isSpecializable && !sym.isConstructor) {
       defDefsOf.put(sym, tree)
       sym.allOverriddenSymbols.foreach { sym0 =>
         allKnownOverwrites.put(sym0, sym.symbol :: allKnownOverwrites.getOrElse(sym0, Nil))
