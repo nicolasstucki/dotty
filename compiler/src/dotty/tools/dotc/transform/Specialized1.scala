@@ -26,7 +26,8 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   private val outerTargsOf = mutable.LinkedHashMap.empty[Symbol, OuterTargs]
 
-  private val defDefsOf= mutable.LinkedHashMap.empty[Symbol, DefDef]
+  private val defDefsOf = mutable.LinkedHashMap.empty[Symbol, DefDef]
+  private val clsDefsOf = mutable.LinkedHashMap.empty[Symbol, TypeDef]
 
   private val needsSpecialization = mutable.LinkedHashMap.empty[Symbol, List[(OuterTargs, Context)]]
 
@@ -39,6 +40,13 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     val outerTargs = outerTargsOf(tree)
     if (outerTargs.mp.contains(sym))
       needsSpecialization.put(sym, (outerTargs, ctx) :: needsSpecialization.getOrElse(sym, List.empty))
+    tree
+  }
+
+  override def transformTypeDef(tree: tpd.TypeDef)(implicit ctx: Context, info: TransformerInfo): tpd.Tree = {
+    val sym = tree.symbol
+    if (sym.isClass && sym.primaryConstructor.isSpecializable)
+      clsDefsOf.put(sym, tree)
     tree
   }
 
@@ -125,6 +133,25 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     specDefDef
   }
 
+  private def specializeTrait(sym: ClassSymbol, outerTargs: OuterTargs)(implicit ctx: Context): Tree = {
+    assert(outerTargs.mp.contains(sym))
+    val key = (sym, outerTargs)
+    assert(!specSymbols.contains(key))
+    val specSym = symSpecializer.specializeTraitSymbol(sym, outerTargs)
+    specSymbols.put(key, specSym)
+    val specTraitDef = TreeSpecialization.specializedTraitDef(clsDefsOf(sym), specSym, outerTargs)
+
+    println(sym)
+    println(sym.primaryConstructor.info.show)
+    println(specSym)
+    println(specSym.primaryConstructor.info.show)
+    println(specTraitDef.show)
+    println(specTraitDef)
+    println()
+    println()
+    null
+  }
+
   private def specilizableTypeParams(sym: Symbol)(implicit ctx: Context): List[Int] = {
     if (ctx.settings.specializeAll.value) sym.info.asInstanceOf[PolyType].paramNames.indices.toList
     else {
@@ -163,12 +190,10 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     def process(specs: mutable.LinkedHashMap[Symbol, List[(OuterTargs, Context)]]): Unit = {
       val newSpecs = mutable.LinkedHashMap.empty[Symbol, List[(OuterTargs, Context)]]
       for ((sym, outerTargsList) <- specs) {
-        if (sym.isConstructor) {
-          ctx.log("Not specializing constructor call " + sym.showFullName)
-        } else {
-          for ((outerTargs, ctx1) <- outerTargsList.reverse) {
-            specializeForCall(sym, outerTargs, newSpecs)(ctx1)
-          }
+        for ((outerTargs, ctx1) <- outerTargsList.reverse) {
+          if (!sym.isConstructor) specializeForCall(sym, outerTargs, newSpecs)(ctx1)
+          else if (sym.owner.is(Trait)) specializeTrait(sym.owner.asClass, outerTargs, newSpecs)(ctx1)
+          else println("Not specializing constructor call " + sym.showFullName)
         }
       }
       if (newSpecs.nonEmpty)
@@ -204,6 +229,12 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
       allKnownOverwrites.getOrElse(sym, Nil).foreach(s => trav.traverse(specializeMethod(s, outerTargs.changeParent(sym, s))))
     }
+  }
+
+  def specializeTrait(sym: ClassSymbol, outerTargs: OuterTargs, newSpecs: mutable.LinkedHashMap[Symbol, List[(OuterTargs, Context)]])(implicit ctx: Context): Unit = {
+    val specTrait = specializeTrait(sym, outerTargs)
+    // TODO check for new specialization opportunities
+
   }
 
 }

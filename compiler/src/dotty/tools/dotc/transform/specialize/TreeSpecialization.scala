@@ -15,6 +15,20 @@ import dotty.tools.dotc.linker._
 object TreeSpecialization {
   import tpd._
 
+  def specializedTraitDef(clsDef: TypeDef, specSym: ClassSymbol, outerTargs: OuterTargs)(implicit ctx: Context): TypeDef = {
+    val rhs = clsDef.rhs.asInstanceOf[Template]
+    val substMap = new SubstituteOuterTargs(outerTargs)
+    val transform = new TreeTypeMap(typeMap = substMap)
+    println(outerTargs)
+    val specConstr = rhs.constr
+    val specParents = rhs.parents
+    val specSelf = rhs.self
+    val specBody = rhs.body
+
+    val specRhs = cpy.Template(rhs)(specConstr, specParents, specSelf, specBody)
+    cpy.TypeDef(clsDef)(specSym.name, specRhs)
+  }
+
   def specializedDefDef(ddef: DefDef, specSym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context): DefDef = {
     val oldSym = ddef.symbol
     def rhsFn(tparams: List[Type])(vparamss: List[List[Tree]]) = {

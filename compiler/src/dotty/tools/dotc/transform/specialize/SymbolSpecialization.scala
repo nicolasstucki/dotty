@@ -32,6 +32,15 @@ class SymbolSpecialization {
     ctx.newSymbol(sym.owner, specName, specFlags, specInfo, sym.privateWithin, sym.coord)
   }
 
+  def specializeTraitSymbol(sym: ClassSymbol, outerTargs: OuterTargs)(implicit ctx: Context): ClassSymbol = {
+    val specName = sym.name ++ specializedNameSuffix(sym, outerTargs)
+    val specFlags = sym.flags | Synthetic
+    def specClsInfo(cls: ClassSymbol): Type = sym.info
+    ctx.newClassSymbol(sym.owner, specName, specFlags, specClsInfo, sym.privateWithin, sym.coord, sym.assocFile)
+  }
+
+
+
   private val boundNames = mutable.Map.empty[(Name, OuterTargs, Map[Name, Type]), Name]
   private val nameIdx = mutable.Map.empty[Name, Int]
   private def specializedNameSuffix(sym: Symbol, outerTargs: OuterTargs)(implicit ctx: Context): Name = {
