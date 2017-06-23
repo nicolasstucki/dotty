@@ -1,4 +1,3 @@
-import scala.collection.mutable.ArrayBuffer
 
 object Test {
   def main(args: Array[String]): Unit = {

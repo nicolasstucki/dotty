@@ -21,12 +21,12 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
 
   override def phaseName = "specialized1"
 
-  private val specSymbols: mutable.Map[(Symbol, OuterTargs), Symbol] = mutable.Map.empty
-  val specDefDefs: mutable.Map[Symbol, List[DefDef]] = mutable.Map.empty
+  private val specSymbols = mutable.LinkedHashMap.empty[(Symbol, OuterTargs), Symbol]
+  val specDefDefs = mutable.LinkedHashMap.empty[Symbol, List[DefDef]]
 
-  private val outerTargsOf: mutable.Map[Symbol, OuterTargs] = mutable.Map.empty
+  private val outerTargsOf = mutable.LinkedHashMap.empty[Symbol, OuterTargs]
 
-  private val defDefsOf: mutable.Map[Symbol, DefDef] = mutable.LinkedHashMap.empty
+  private val defDefsOf= mutable.LinkedHashMap.empty[Symbol, DefDef]
 
   private val needsSpecialization = mutable.LinkedHashMap.empty[Symbol, List[(OuterTargs, Context)]]
 
@@ -160,30 +160,21 @@ class Specialized1 extends MiniPhaseTransform { thisTransformer =>
     val units1 = super.runOn(units)
     // TODO load compilation units based on needsSpecialization and super.runOn(loadedUnits)
 
-
-    // TODO improve
-    val newSpecs = mutable.LinkedHashMap.empty[Symbol, List[(OuterTargs, Context)]]
-    newSpecs ++= needsSpecialization
-    do {
-      val toProcess = newSpecs.toMap
-      newSpecs.clear()
-      for (ddef <- defDefsOf.values) {
-        val sym = ddef.symbol
-        toProcess.get(sym) match {
-          case Some(outerTargsList) =>
-            val outerTargsList1 = outerTargsList
-            for ((outerTargs, ctx1) <- outerTargsList1.reverse) {
-              specializeForCall(sym, outerTargs, newSpecs)(ctx1)
-            }
-
-          case _ =>
+    def process(specs: mutable.LinkedHashMap[Symbol, List[(OuterTargs, Context)]]): Unit = {
+      val newSpecs = mutable.LinkedHashMap.empty[Symbol, List[(OuterTargs, Context)]]
+      for ((sym, outerTargsList) <- specs) {
+        if (sym.isConstructor) {
+          ctx.log("Not specializing constructor call " + sym.showFullName)
+        } else {
+          for ((outerTargs, ctx1) <- outerTargsList.reverse) {
+            specializeForCall(sym, outerTargs, newSpecs)(ctx1)
+          }
         }
       }
-
-
-    } while (newSpecs.nonEmpty)
-
-    ctx.log("Did not specialize: " + needsSpecialization.keys)
+      if (newSpecs.nonEmpty)
+        process(newSpecs)
+    }
+    process(needsSpecialization)
 
     units1
   }
