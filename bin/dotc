@@ -17,6 +17,7 @@ source "$DOTTY_ROOT/bin/common"
 DOTTY_JAR="$DOTTY_ROOT/dotty.jar"
 
 CompilerMain=dotty.tools.dotc.Main
+BenchMain=dotty.tools.dotc.Bench
 FromTasty=dotty.tools.dotc.FromTasty
 ReplMain=dotty.tools.dotc.repl.Main
 
@@ -25,6 +26,7 @@ then
   echo To use this script please set
   echo SCALA_LIBRARY_JAR to point to scala-library-$SCALA_VERSION.jar "(currently $SCALA_LIBRARY_JAR)"
   echo SCALA_ASM_JAR to point to scala-asm-$SCALA_ASM_VERSION.jar "(currently $SCALA_ASM_JAR)"
+  echo SCALA_XML_JAR to point to scala-asm-$SCALA_XML_VERSION.jar "(currently $SCALA_XML_JAR)"
   echo SBT_INTERFACE_JAR to point to interface-$SBT_VERSION.jar "(currently $SBT_INTERFACE_JAR)"
 fi
 
@@ -115,9 +117,9 @@ trap onExit INT
 classpathArgs () {
   if [[ "true" == "$bootstrapped" ]]; then
     check_jar "dotty-bootstrapped" "$DOTTY_JAR" "target" 'build_jar "test:runMain dotc.build" target' &> /dev/null
-    toolchain="$DOTTY_JAR:$DOTTY_LIB_JAR:$SCALA_LIBRARY_JAR:$SCALA_ASM_JAR:$SBT_INTERFACE_JAR"
+    toolchain="$DOTTY_JAR:$DOTTY_LIB_JAR:$SCALA_LIBRARY_JAR:$SCALA_ASM_JAR:$SCALA_XML_JAR:$SBT_INTERFACE_JAR"
   else
-    toolchain="$SCALA_LIBRARY_JAR:$DOTTY_LIB_JAR:$SCALA_ASM_JAR:$SBT_INTERFACE_JAR"
+    toolchain="$SCALA_LIBRARY_JAR:$DOTTY_LIB_JAR:$SCALA_ASM_JAR:$SCALA_XML_JAR:$SBT_INTERFACE_JAR"
   fi
   bcpJars="$INTERFACES_JAR:$MAIN_JAR:$DOTTY_LIB_JAR"
   cpJars="$INTERFACES_JAR:$MAIN_JAR:$DOTTY_LIB_JAR:$TEST_JAR"
@@ -175,6 +177,7 @@ case "$1" in
         -repl) main_class="$ReplMain" && shift ;;
        -tasty) main_class="$FromTasty" && shift ;;
      -compile) main_class="$CompilerMain" && shift ;;
+       -bench) main_class="$BenchMain" && bench_cmd=$2 && shift 2 ;;
          -run) main_class="$ReplMain" && shift ;;
          -fsc) main_class="$FscMain" && shift ;;
       -bootcp) bootcp=true && shift ;;
@@ -198,6 +201,8 @@ done
 
 
 [[ -z $java_cmd ]] && prefix=${java_home:+$java_home/bin/} && java_cmd="${prefix}java"
+
+java_cmd="$bench_cmd $java_cmd"
 
 # note that variables which may intentionally be empty must not
 # be quoted: otherwise an empty string will appear as a command line

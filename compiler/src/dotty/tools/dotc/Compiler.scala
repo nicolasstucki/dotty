@@ -149,6 +149,7 @@ class Compiler {
   }
 
   def newRun(implicit ctx: Context): Run = {
+    if (ctx.settings.Ysleep.value > 0) Thread.sleep(ctx.settings.Ysleep.value * 1000)
     reset()
     new Run(this)(rootContext)
   }

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+function run {
+  local csv="./benchmarks.csv"
+  local out_file="./out/bench-out.txt"
+
+  local commit=$(git log -1 | grep -o -E "[0-9a-f]{40}")
+
+  echo "Running perf on $1 (sleep $3)"
+  find $2 -type f \( -name "*.scala" -or -name "*.java" \) -exec ./bin/dotc -bench "perf stat -r $4 -o $out_file" -Ysleep $3 -d out/bench {} +
+  rm -R ./out/bench
+
+  local timeline=$(grep -o -E "[0-9]+(\.[0-9]+)? *seconds time elapsed +\(.+\)" $out_file)
+  local time=$(grep -o -E "[0-9]+(\.[0-9]+)? *seconds time elapsed" $out_file | grep -o -E "[0-9]+(\.[0-9]+)?")
+  local time_err=$(egrep -o -E "seconds time elapsed +\(.+\)" $out_file | grep -o -E "[0-9]+(\.[0-9]+)?")
+
+  echo "$commit,$1,$3,$time,$time_err" >> $csv
+  echo "$csv updated"
+}
+
+run "collection-strawman" "./collection-strawman/src/main" 0 5
+run "collection-strawman5" "./collection-strawman/src/main" 5 5
+
+# run "compiler" "./compiler/src" "perf" 0 3
+# run "compiler" "./compiler/src" "perf" 5 3

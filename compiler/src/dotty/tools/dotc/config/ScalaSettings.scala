@@ -102,6 +102,8 @@ class ScalaSettings extends Settings.SettingGroup {
   val YretainTrees = BooleanSetting("-Yretain-trees", "Retain trees for top-level classes, accessible from ClassSymbol#tree")
   val YshowTreeIds = BooleanSetting("-Yshow-tree-ids", "Uniquely tag all tree nodes in debugging output.")
 
+  val Ysleep = IntSetting("-Ysleep", "Put the compiler to sleep for n seconds", 0)
+
   /** Area-specific debug output */
   val Yexplainlowlevel = BooleanSetting("-Yexplain-lowlevel", "When explaining type errors, show types at a lower level.")
   val YnoDoubleBindings = BooleanSetting("-Yno-double-bindings", "Assert no namedtype is bound twice (should be enabled only if program is error-free).")
