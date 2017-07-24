@@ -23,8 +23,10 @@ object TestConfiguration {
     "-Yforce-sbt-phases"
   )
 
-  val classPath = {
-    val paths = Jars.dottyTestDeps map { p =>
+  val classPath = mkClassPath(Jars.dottyTestDeps)
+
+  def mkClassPath(classPaths: List[String], classPathFlag: String = "-classpath"): Array[String] = {
+    val paths = classPaths map { p =>
       val file = new java.io.File(p)
       assert(
         file.exists,
@@ -47,12 +49,13 @@ object TestConfiguration {
       file.getAbsolutePath
     } mkString (":")
 
-    Array("-classpath", paths)
+    Array(classPathFlag, paths)
   }
 
   private val yCheckOptions = Array("-Ycheck:tailrec,resolveSuper,mixin,arrayConstructors,labelDef")
 
-  val defaultUnoptimised = noCheckOptions ++ checkOptions ++ yCheckOptions ++ classPath
+  val basicDefaultOptions = noCheckOptions ++ checkOptions ++ yCheckOptions
+  val defaultUnoptimised = basicDefaultOptions ++ classPath
   val defaultOptimised = defaultUnoptimised :+ "-optimise"
   val defaultOptions = defaultUnoptimised
   val allowDeepSubtypes = defaultOptions diff Array("-Yno-deep-subtypes")
@@ -65,4 +68,5 @@ object TestConfiguration {
   val scala2Mode = defaultOptions ++ Array("-language:Scala2")
   val explicitUTF8 = defaultOptions ++ Array("-encoding", "UTF8")
   val explicitUTF16 = defaultOptions ++ Array("-encoding", "UTF16")
+  val basicLinkOptimise = basicDefaultOptions ++ Array("-Xlink-optimise")
 }
