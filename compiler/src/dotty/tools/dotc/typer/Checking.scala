@@ -686,6 +686,7 @@ trait Checking {
         val psuper = parent.superClass
         val csuper = cls.superClass
         val ok = csuper.derivesFrom(psuper) ||
+          parent == defn.Phantom_AnyClass ||
           parent.is(JavaDefined) && csuper == defn.AnyClass &&
           (parent == defn.JavaSerializableClass || parent == defn.ComparableClass)
         if (!ok)
