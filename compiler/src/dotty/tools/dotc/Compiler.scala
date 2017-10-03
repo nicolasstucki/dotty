@@ -51,6 +51,8 @@ class Compiler {
            new CheckReentrant,      // Internal use only: Check that compiled program has no data races involving global vars
            new ElimJavaPackages),   // Eliminate syntactic references to Java packages
       List(new CheckStatic,         // Check restrictions that apply to @static members
+           new UnusedRefs,          // Removes all calls and references to unused values
+           new UnusedArgLift,       // Extracts the evaluation of unused arguments placing them before the call.
            new ElimRepeated,        // Rewrite vararg parameters and arguments
            new NormalizeFlags,      // Rewrite some definition flags
            new ExtensionMethods,    // Expand methods of value classes with extension methods
@@ -59,8 +61,9 @@ class Compiler {
            new ByNameClosures,      // Expand arguments to by-name parameters to closures
            new LiftTry,             // Put try expressions that might execute on non-empty stacks into their own methods
            new HoistSuperArgs,      // Hoist complex arguments of supercalls to enclosing scope
-           new ClassOf,            // Expand `Predef.classOf` calls.
-           new RefChecks),           // Various checks mostly related to abstract members and overriding
+           new ClassOf,             // Expand `Predef.classOf` calls.
+           new RefChecks),          // Various checks mostly related to abstract members and overriding
+      List(new UnusedParams),       // Removes all unused parameters and arguments
       List(new TryCatchPatterns,    // Compile cases in try/catch
            new PatternMatcher,      // Compile pattern matches
            new ExplicitOuter,       // Add accessors to outer classes from nested ones.
@@ -68,7 +71,7 @@ class Compiler {
            new ShortcutImplicits,   // Allow implicit functions without creating closures
            new CrossCastAnd,        // Normalize selections involving intersection types.
            new Splitter),           // Expand selections involving union types into conditionals
-      List(new PhantomArgLift, // Extracts the evaluation of phantom arguments placing them before the call.
+      List(new UnusedDecls,         // Removes all unused defs and vals decls (except parameters)
            new VCInlineMethods,     // Inlines calls to value class methods
            new SeqLiterals,         // Express vararg arguments as arrays
            new InterceptedMethods,  // Special handling of `==`, `|=`, `getClass` methods

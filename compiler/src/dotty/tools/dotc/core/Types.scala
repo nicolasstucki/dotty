@@ -293,6 +293,9 @@ object Types {
     /** Is this a MethodType which has implicit parameters */
     def isImplicitMethod: Boolean = false
 
+    /** Is this a MethodType for which the parameters will not be used */
+    def isUnusedMethod: Boolean = false
+
 // ----- Higher-order combinators -----------------------------------
 
     /** Returns true if there is a part of this type that satisfies predicate `p`.
@@ -2723,14 +2726,17 @@ object Types {
     def companion: MethodTypeCompanion
 
     final override def isJavaMethod: Boolean = companion eq JavaMethodType
-    final override def isImplicitMethod: Boolean = companion eq ImplicitMethodType
+    final override def isImplicitMethod: Boolean = companion.eq(ImplicitMethodType) || companion.eq(UnusedImplicitMethodType)
+    final override def isUnusedMethod: Boolean = companion.eq(UnusedMethodType) || companion.eq(UnusedImplicitMethodType)
 
     val paramInfos = paramInfosExp(this)
     val resType = resultTypeExp(this)
     assert(resType.exists)
 
-    def computeSignature(implicit ctx: Context): Signature =
-      resultSignature.prepend(paramInfos, isJavaMethod)
+    def computeSignature(implicit ctx: Context): Signature = {
+      val params = if (isUnusedMethod) Nil else paramInfos
+      resultSignature.prepend(params, isJavaMethod)
+    }
 
     final override def computeHash = doHash(paramNames, resType, paramInfos)
 
@@ -2851,6 +2857,8 @@ object Types {
   object MethodType extends MethodTypeCompanion
   object JavaMethodType extends MethodTypeCompanion
   object ImplicitMethodType extends MethodTypeCompanion
+  object UnusedMethodType extends MethodTypeCompanion
+  object UnusedImplicitMethodType extends MethodTypeCompanion
 
   /** A ternary extractor for MethodType */
   object MethodTpe {
