@@ -52,6 +52,7 @@ class Compiler {
            new UnusedRefs,          // Removes all calls and references to unused values
            new UnusedArgLift,       // Extracts the evaluation of unused arguments placing them before the call.
            new ElimJavaPackages),   // Eliminate syntactic references to Java packages
+      List(new UnusedParams),       // Removes all unused parameters and arguments
       List(new CheckStatic,         // Check restrictions that apply to @static members
            new ElimRepeated,        // Rewrite vararg parameters and arguments
            new NormalizeFlags,      // Rewrite some definition flags
@@ -63,7 +64,6 @@ class Compiler {
            new HoistSuperArgs,      // Hoist complex arguments of supercalls to enclosing scope
            new ClassOf,             // Expand `Predef.classOf` calls.
            new RefChecks),          // Various checks mostly related to abstract members and overriding
-      List(new UnusedParams),       // Removes all unused parameters and arguments
       List(new TryCatchPatterns,    // Compile cases in try/catch
            new PatternMatcher,      // Compile pattern matches
            new ExplicitOuter,       // Add accessors to outer classes from nested ones.

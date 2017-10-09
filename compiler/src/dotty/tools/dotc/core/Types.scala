@@ -1351,9 +1351,11 @@ object Types {
     def toFunctionType(dropLast: Int = 0)(implicit ctx: Context): Type = this match {
       case mt: MethodType if !mt.isParamDependent =>
         val formals1 = if (dropLast == 0) mt.paramInfos else mt.paramInfos dropRight dropLast
+        val isImplicit = mt.isImplicitMethod && !ctx.erasedTypes
+        val isUnused = mt.isUnusedMethod && !ctx.erasedTypes
         val funType = defn.FunctionOf(
           formals1 mapConserve (_.underlyingIfRepeated(mt.isJavaMethod)),
-          mt.nonDependentResultApprox, mt.isImplicitMethod && !ctx.erasedTypes)
+          mt.nonDependentResultApprox, isImplicit, isUnused)
         if (mt.isDependent) RefinedType(funType, nme.apply, mt)
         else funType
     }
