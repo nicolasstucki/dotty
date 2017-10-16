@@ -13,7 +13,7 @@ import dotty.tools.dotc.transform.MegaPhase.MiniPhase
  *    - Unused defs and vals are not used
  *    - There are no unused parameter declarations
  *
- *  `@unused def f(...) = ...` and  `@unused val x = ...` are removed
+ *  `unused def f(...) = ...` and  `unused val x = ...` are removed
  */
 class UnusedDecls extends MiniPhase with InfoTransformer {
   import tpd._
