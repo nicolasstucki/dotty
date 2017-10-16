@@ -386,11 +386,11 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
         tree.withType(ownType)
     }
 
-    checkUnused(checkValue(tree1, pt), pt)
+    checkValue(tree1, pt)
   }
 
   private def typedSelect(tree: untpd.Select, pt: Type, qual: Tree)(implicit ctx: Context): Select =
-    checkUnused(checkValue(assignType(cpy.Select(tree)(qual, tree.name), qual), pt), pt)
+    checkValue(assignType(cpy.Select(tree)(qual, tree.name), qual), pt)
 
   def typedSelect(tree: untpd.Select, pt: Type)(implicit ctx: Context): Tree = track("typedSelect") {
     def typeSelectOnTerm(implicit ctx: Context): Tree = {
@@ -1299,9 +1299,7 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
     val tpt1 = checkSimpleKinded(typedType(tpt))
     val rhs1 = vdef.rhs match {
       case rhs @ Ident(nme.WILDCARD) => rhs withType tpt1.tpe
-      case rhs =>
-        val rhsCtx = if (sym.is(Unused)) ctx.addMode(Mode.Unused) else ctx
-        typedExpr(rhs, tpt1.tpe)(rhsCtx)
+      case rhs => typedExpr(rhs, tpt1.tpe)
     }
     val vdef1 = assignType(cpy.ValDef(vdef)(name, tpt1, rhs1), sym)
     if (sym.is(Inline, butNot = DeferredOrParamAccessor))
@@ -1359,7 +1357,6 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
       (tparams1, sym.owner.typeParams).zipped.foreach ((tdef, tparam) =>
         rhsCtx.gadt.setBounds(tdef.symbol, TypeAlias(tparam.typeRef)))
     }
-    if (sym.is(Unused)) rhsCtx = rhsCtx.addMode(Mode.Unused)
     val rhs1 = typedExpr(ddef.rhs, tpt1.tpe)(rhsCtx)
 
     // Overwrite inline body to make sure it is not evaluated twice
