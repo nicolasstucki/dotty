@@ -318,7 +318,6 @@ object Phases {
 
     private[this] var myPeriod: Period = Periods.InvalidPeriod
     private[this] var myBase: ContextBase = null
-    private[this] var myErasedUnused = false
     private[this] var myErasedTypes = false
     private[this] var myFlatClasses = false
     private[this] var myRefChecked = false
@@ -337,7 +336,6 @@ object Phases {
     def start = myPeriod.firstPhaseId
     def end = myPeriod.lastPhaseId
 
-    final def erasedUnused = myErasedUnused // Phase is after usused params erasure
     final def erasedTypes = myErasedTypes   // Phase is after erasure
     final def flatClasses = myFlatClasses   // Phase is after flatten
     final def refChecked = myRefChecked     // Phase is after RefChecks
@@ -354,7 +352,6 @@ object Phases {
       assert(start <= Periods.MaxPossiblePhaseId, s"Too many phases, Period bits overflow")
       myBase = base
       myPeriod = Period(NoRunId, start, end)
-      myErasedUnused = prev.getClass == classOf[UnusedParams] || prev.erasedUnused
       myErasedTypes  = prev.getClass == classOf[Erasure]      || prev.erasedTypes
       myFlatClasses  = prev.getClass == classOf[Flatten]      || prev.flatClasses
       myRefChecked   = prev.getClass == classOf[RefChecks]    || prev.refChecked
