@@ -726,7 +726,7 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
   def typedFunctionType(tree: untpd.Function, pt: Type)(implicit ctx: Context) = {
     val untpd.Function(args, body) = tree
     val (isImplicit, isUnused) = tree match {
-      case _: untpd.ImplicitFunction | _: untpd.UnusedImplicitFunction | _: untpd.UnusedFunction if args.isEmpty =>
+      case _: untpd.NonEmptyFunction if args.isEmpty =>
         ctx.error(FunctionTypeNeedsNonEmptyParameterList(), tree.pos)
         (false, false)
       case _: untpd.UnusedImplicitFunction => (true, true)
