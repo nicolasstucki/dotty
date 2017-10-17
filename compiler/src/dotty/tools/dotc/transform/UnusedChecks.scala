@@ -31,10 +31,13 @@ class UnusedChecks extends MiniPhase {
     tree
   }
 
-  override def transformDefDef(tree: DefDef)(implicit ctx: Context): tree.type =
+  override def transformDefDef(tree: DefDef)(implicit ctx: Context): tree.type = {
+    checkUnusedNothing(tree)
     checkedValOrDefDefRHS(tree)
+  }
 
   override def transformValDef(tree: ValDef)(implicit ctx: Context): tree.type = {
+    checkUnusedNothing(tree)
     if (tree.symbol.is(Unused) && tree.symbol.is(MutableOrLazy))
       ctx.error(tree.symbol.showKind + " cannot be unused", tree.pos)
     checkedValOrDefDefRHS(tree)
@@ -57,6 +60,11 @@ class UnusedChecks extends MiniPhase {
 
 
   /* private methods */
+
+  private def checkUnusedNothing(tree: Tree)(implicit ctx: Context): Unit = {
+    if (tree.symbol.is(Unused) && tree.tpe.widen.finalResultType.isBottomType)
+      ctx.error("unused " + tree.symbol.showKind + " cannot have type Nothing", tree.pos)
+  }
 
   private def checkedValOrDefDefRHS(tree: ValOrDefDef)(implicit ctx: Context): tree.type =
     if (tree.symbol.is(Unused)) tree

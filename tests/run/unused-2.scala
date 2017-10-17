@@ -2,8 +2,8 @@ object Test {
 
   def main(args: Array[String]): Unit = {
 
-    def !!! : Nothing = ???
-    unused def &&& : Nothing = ???
+    def !!! : Null = ???
+    unused def &&& : Null = ???
 
     fun(&&&)
     try {
@@ -13,7 +13,7 @@ object Test {
     }
   }
 
-  def fun(unused bottom: Nothing): Unit = {
+  def fun(unused bottom: Null): Unit = {
     println("fun")
   }
 }
