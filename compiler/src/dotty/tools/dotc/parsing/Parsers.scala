@@ -1870,12 +1870,12 @@ object Parsers {
     def typeParamClauseOpt(ownerKind: ParamOwner.Value): List[TypeDef] =
       if (in.token == LBRACKET) typeParamClause(ownerKind) else Nil
 
-    /** ClsParamClauses   ::=  {ClsParamClause} [[nl] `(' `implicit' ClsParams `)']
-     *  ClsParamClause    ::=  [nl] `(' [ClsParams] ')'
+    /** ClsParamClauses   ::=  {ClsParamClause} [[nl] `(' `implicit' [`unused'] ClsParams `)']
+     *  ClsParamClause    ::=  [nl] `(' [`unused'] [ClsParams] ')'
      *  ClsParams         ::=  ClsParam {`' ClsParam}
      *  ClsParam          ::=  {Annotation} [{Modifier} (`val' | `var') | `inline'] Param
-     *  DefParamClauses   ::=  {DefParamClause} [[nl] `(' `implicit' DefParams `)']
-     *  DefParamClause    ::=  [nl] `(' [DefParams] ')'
+     *  DefParamClauses   ::=  {DefParamClause} [[nl] `(' `implicit' [`unused'] DefParams `)']
+     *  DefParamClause    ::=  [nl] `(' [`unused'] [DefParams] ')'
      *  DefParams         ::=  DefParam {`,' DefParam}
      *  DefParam          ::=  {Annotation} [`inline'] Param
      *  Param             ::=  id `:' ParamType [`=' Expr]
@@ -1934,7 +1934,6 @@ object Parsers {
         if (in.token == RPAREN) Nil
         else {
           if (in.token == IMPLICIT || in.token == UNUSED) {
-            imods = EmptyModifiers
             if (in.token == IMPLICIT) {
               implicitOffset = in.offset
               imods = implicitMods(imods)
@@ -1947,12 +1946,13 @@ object Parsers {
       }
       def clauses(): List[List[ValDef]] = {
         newLineOptWhenFollowedBy(LPAREN)
-        if (in.token == LPAREN)
+        if (in.token == LPAREN) {
+          imods = EmptyModifiers
           paramClause() :: {
             firstClauseOfCaseClass = false
             if (imods is Implicit) Nil else clauses()
           }
-        else Nil
+        } else Nil
       }
       val start = in.offset
       val result = clauses()

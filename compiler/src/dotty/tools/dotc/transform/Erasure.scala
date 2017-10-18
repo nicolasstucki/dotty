@@ -457,22 +457,14 @@ object Erasure {
     private def runtimeCallWithProtoArgs(name: Name, pt: Type, args: Tree*)(implicit ctx: Context): Tree = {
       val meth = defn.runtimeMethodRef(name)
       val followingParams = meth.symbol.info.firstParamTypes.drop(args.length)
-      val followingArgs = protoArgs(pt).zipWithConserve(followingParams)(typedExpr).asInstanceOf[List[tpd.Tree]]
+      val followingArgs = protoArgs(pt, meth.widen).zipWithConserve(followingParams)(typedExpr).asInstanceOf[List[tpd.Tree]]
       ref(meth).appliedToArgs(args.toList ++ followingArgs)
     }
 
-    private def protoArgs(pt: Type): List[untpd.Tree] = pt match {
-      case pt: FunProto => pt.args ++ protoArgs(pt.resType)
+    private def protoArgs(pt: Type, tp: Type): List[untpd.Tree] = (pt, tp) match {
+      case (pt: FunProto, tp: MethodType) if tp.isUnusedMethod => protoArgs(pt.resType, tp.resType)
+      case (pt: FunProto, tp: MethodType) => pt.args ++ protoArgs(pt.resType, tp.resType)
       case _ => Nil
-    }
-
-    // TODO: merge this whit protoArgs if it is actually needed
-    private def protoArgs2(pt: Type, tp: Type): List[untpd.Tree] = (pt, tp) match {
-      case (pt: FunProto, tp: MethodType) if tp.isUnusedMethod => protoArgs2(pt.resType, tp.resType)
-      case (pt: FunProto, tp: MethodType) => pt.args ++ protoArgs2(pt.resType, tp.resType)
-      case _ =>
-        assert(!tp.isInstanceOf[MethodOrPoly], tp)
-        Nil
     }
 
     override def typedTypeApply(tree: untpd.TypeApply, pt: Type)(implicit ctx: Context) = {
@@ -505,8 +497,8 @@ object Erasure {
           fun1.tpe.widen match {
             case mt: MethodType =>
               val outers = outer.args(fun.asInstanceOf[tpd.Tree]) // can't use fun1 here because its type is already erased
-              var args0 = protoArgs2(pt, tree.typeOpt)
-              if (!mt.isUnusedMethod) args0 = args ::: args0
+              var args0 = protoArgs(pt, tree.typeOpt)
+              if (mt.paramNames.nonEmpty && !mt.isUnusedMethod) args0 = args ::: args0
               args0 = outers ::: args0
 
               if (args0.length > MaxImplementedFunctionArity && mt.paramInfos.length == 1) {
@@ -515,8 +507,10 @@ object Erasure {
                 args0 = bunchedArgs :: Nil
               }
               // Arguments are phantom if an only if the parameters are phantom, guaranteed by the separation of type lattices
-              val args1 = args0.filterConserve(arg => !wasPhantom(arg.typeOpt)).zipWithConserve(mt.paramInfos)(typedExpr)
-              untpd.cpy.Apply(tree)(fun1, args1) withType mt.resultType
+              val args1 = args0.filterConserve(arg => !wasPhantom(arg.typeOpt))
+              assert(args1 hasSameLengthAs mt.paramInfos)
+              val args2 = args1.zipWithConserve(mt.paramInfos)(typedExpr)
+              untpd.cpy.Apply(tree)(fun1, args2) withType mt.resultType
             case _ =>
               throw new MatchError(i"tree $tree has unexpected type of function ${fun1.tpe.widen}, was ${fun.typeOpt.widen}")
           }

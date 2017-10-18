@@ -16,10 +16,10 @@ object Test {
   }
 
   def fun(a: Int)(unused b: String): Unit = {
-    println("fun")
+    println("fun " + a)
   }
 
   def fun2(unused a: Int)(b: String): Unit = {
-    println("fun2")
+    println("fun2 " + b)
   }
 }

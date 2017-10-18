@@ -11,10 +11,10 @@ object Test {
   }
 
   def fun(a: Int)(unused b: Int)(c: Int)(unused d: Int): Unit = {
-    println("fun")
+    println("fun " + a + " " + c)
   }
 
   def fun2(unused a2: Int)(b2: Int)(unused c2: Int)(d2: Int): Unit = {
-    println("fun2")
+    println("fun2 " + b2 + " " + d2)
   }
 }
