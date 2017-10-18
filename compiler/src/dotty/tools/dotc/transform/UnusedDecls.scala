@@ -5,13 +5,11 @@ import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.DenotTransformers.InfoTransformer
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.core.Phases.Phase
 import dotty.tools.dotc.core.Types._
 import dotty.tools.dotc.transform.MegaPhase.MiniPhase
 
 /** This phase removes unused declarations of `def`s and `val`s (except for parameters).
- *  It assumes that:
- *    - Unused defs and vals are not used
- *    - There are no unused parameter declarations
  *
  *  `unused def f(...) = ...` and  `unused val x = ...` are removed
  */
@@ -20,9 +18,8 @@ class UnusedDecls extends MiniPhase with InfoTransformer {
 
   override def phaseName: String = "unusedDecls"
 
-  override def runsAfterGroupsOf = Set(
-    classOf[UnusedParams], // ensure no unused parameters declarations
-    classOf[UnusedRefs] // ensures declarations are not used
+  override def runsAfterGroupsOf: Set[Class[_ <: Phase]] = Set(
+    classOf[PatternMatcher] // Make sure pattern match errors are emitted
   )
 
   /** Check what the phase achieves, to be called at any point after it is finished. */
@@ -34,13 +31,11 @@ class UnusedDecls extends MiniPhase with InfoTransformer {
 
   /* Tree transform */
 
-  override def transformDefDef(tree: DefDef)(implicit ctx: Context): Tree =
-    if (tree.symbol.is(Unused)) EmptyTree
-    else tree
+  override def transformDefDef(tree: DefDef)(implicit ctx: Context): Tree = transformValOrDefDef(tree)
+  override def transformValDef(tree: ValDef)(implicit ctx: Context): Tree = transformValOrDefDef(tree)
 
-  override def transformValDef(tree: ValDef)(implicit ctx: Context): Tree =
-    if (tree.symbol.is(Unused)) EmptyTree
-    else tree
+  private def transformValOrDefDef(tree: ValOrDefDef)(implicit ctx: Context): Tree =
+    if (tree.symbol is Unused) EmptyTree else tree
 
 
   /* Info transform */

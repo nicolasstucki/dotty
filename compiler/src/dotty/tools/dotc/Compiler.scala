@@ -72,7 +72,7 @@ class Compiler {
            new ShortcutImplicits,   // Allow implicit functions without creating closures
            new CrossCastAnd,        // Normalize selections involving intersection types.
            new Splitter),           // Expand selections involving union types into conditionals
-      List(new UnusedDecls,         // Removes all unused defs and vals decls (except parameters)
+      List(new UnusedDecls,         // Removes all unused defs and vals decls
            new VCInlineMethods,     // Inlines calls to value class methods
            new SeqLiterals,         // Express vararg arguments as arrays
            new InterceptedMethods,  // Special handling of `==`, `|=`, `getClass` methods
