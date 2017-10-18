@@ -466,6 +466,15 @@ object Erasure {
       case _ => Nil
     }
 
+    // TODO: merge this whit protoArgs if it is actually needed
+    private def protoArgs2(pt: Type, tp: Type): List[untpd.Tree] = (pt, tp) match {
+      case (pt: FunProto, tp: MethodType) if tp.isUnusedMethod => protoArgs2(pt.resType, tp.resType)
+      case (pt: FunProto, tp: MethodType) => pt.args ++ protoArgs2(pt.resType, tp.resType)
+      case _ =>
+        assert(!tp.isInstanceOf[MethodOrPoly], tp)
+        Nil
+    }
+
     override def typedTypeApply(tree: untpd.TypeApply, pt: Type)(implicit ctx: Context) = {
       val ntree = interceptTypeApply(tree.asInstanceOf[TypeApply])(ctx.withPhase(ctx.erasurePhase))
 
@@ -496,7 +505,10 @@ object Erasure {
           fun1.tpe.widen match {
             case mt: MethodType =>
               val outers = outer.args(fun.asInstanceOf[tpd.Tree]) // can't use fun1 here because its type is already erased
-              var args0 = outers ::: args ++ protoArgs(pt)
+              var args0 = protoArgs2(pt, tree.typeOpt)
+              if (!mt.isUnusedMethod) args0 = args ::: args0
+              args0 = outers ::: args0
+
               if (args0.length > MaxImplementedFunctionArity && mt.paramInfos.length == 1) {
                 val bunchedArgs = untpd.JavaSeqLiteral(args0, TypeTree(defn.ObjectType))
                   .withType(defn.ArrayOf(defn.ObjectType))
@@ -564,6 +576,7 @@ object Erasure {
         vparamss1 = (tpd.ValDef(bunchedParam) :: Nil) :: Nil
         rhs1 = untpd.Block(paramDefs, rhs1)
       }
+      vparamss1 = vparamss1.mapConserve(_.filterConserve(!_.symbol.is(Flags.Unused)))
       vparamss1 = vparamss1.mapConserve(_.filterConserve(vparam => !wasPhantom(vparam.tpe)))
       if (sym.is(Flags.ParamAccessor) && wasPhantom(ddef.tpt.tpe)) {
         sym.resetFlag(Flags.ParamAccessor)

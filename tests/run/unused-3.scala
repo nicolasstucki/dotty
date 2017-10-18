@@ -1,15 +1,20 @@
 object Test {
 
   def main(args: Array[String]): Unit = {
-    fun(foo)(foo)
+    fun(foo1)(foo2)
   }
 
-  def foo: Int = {
-    println("foo")
+  def foo1: Int = {
+    println("foo1")
     42
   }
 
-  def fun(unused a: Int)(unused b: Int): Unit = {
+  def foo2: String = {
+    println("foo2")
+    "abc"
+  }
+
+  def fun(unused a: Int)(unused b: String): Unit = {
     println("fun")
   }
 
