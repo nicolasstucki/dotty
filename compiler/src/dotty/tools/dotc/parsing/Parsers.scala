@@ -2530,7 +2530,7 @@ object Parsers {
           stats ++= importClause()
         else if (isExprIntro)
           stats += expr(Location.InBlock)
-        else if (isDefIntro(localModifierTokens)) {
+        else if (isDefIntro(localModifierTokens))
           if (in.token == IMPLICIT || in.token == UNUSED) {
             val start = in.offset
             var imods = EmptyModifiers
@@ -2541,7 +2541,7 @@ object Parsers {
           } else {
             stats +++= localDef(in.offset)
           }
-        } else if (!isStatSep && (in.token != CASE)) {
+        else if (!isStatSep && (in.token != CASE)) {
           exitOnError = mustStartStat
           syntaxErrorOrIncomplete(IllegalStartOfStatement(isModifier))
         }

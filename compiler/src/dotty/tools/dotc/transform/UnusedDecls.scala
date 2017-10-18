@@ -51,5 +51,4 @@ class UnusedDecls extends MiniPhase with InfoTransformer {
       else tp.derivedClassInfo(decls = tp.decls.filteredScope(!_.is(Unused)))
     case _ => tp
   }
-
 }

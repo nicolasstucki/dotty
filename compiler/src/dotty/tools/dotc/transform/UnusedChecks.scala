@@ -8,8 +8,13 @@ import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Symbols._
 import dotty.tools.dotc.transform.MegaPhase.MiniPhase
 
-// TODO
-/** THis phase ...
+/** This phase checks that unused `def`s, `val`s and parameters are only used in valid place.
+ *  It also checks that the `unused` keyword is only used on `def`, `val` and parameters lists
+ *
+ *  Unused values can be used:
+ *    - As parameters to an unused function
+ *    - In statement position
+ *    - Anywhere in the RHS of an `unused def` or `unused val`
  */
 class UnusedChecks extends MiniPhase {
   import tpd._
@@ -61,11 +66,13 @@ class UnusedChecks extends MiniPhase {
 
   /* private methods */
 
+  /** Check that unused values are not of type Nothing */
   private def checkUnusedNothing(tree: Tree)(implicit ctx: Context): Unit = {
     if (tree.symbol.is(Unused) && tree.tpe.widen.finalResultType.isBottomType)
       ctx.error("unused " + tree.symbol.showKind + " cannot have type Nothing", tree.pos)
   }
 
+  /** Check that the expression is not a reference to an unused value */
   private def checkedValOrDefDefRHS(tree: ValOrDefDef)(implicit ctx: Context): tree.type =
     if (tree.symbol.is(Unused)) tree
     else checked(tree)(tree.rhs, "Cannot return `unused` value in a def without `unused`")
@@ -90,6 +97,6 @@ class UnusedChecks extends MiniPhase {
     tree0
   }
 
-  def isUnusedContext(implicit ctx: Context): Boolean =
+  private def isUnusedContext(implicit ctx: Context): Boolean =
     ctx.owner.ownersIterator.exists(_.is(Unused)) // TODO make context mode?
 }

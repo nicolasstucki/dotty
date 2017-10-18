@@ -852,6 +852,8 @@ class Definitions {
    *    - FunctionN for 22 > N >= 0 remains as FunctionN
    *    - ImplicitFunctionN for N > 22 becomes FunctionXXL
    *    - ImplicitFunctionN for 22 > N >= 0 becomes FunctionN
+   *    - UnusedFunctionN becomes Function0
+   *    - ImplicitUnusedFunctionN becomes Function0
    *    - anything else becomes a NoSymbol
    */
   def erasedFunctionClass(cls: Symbol): Symbol = {
@@ -867,6 +869,8 @@ class Definitions {
    *    - FunctionN for 22 > N >= 0 remains as FunctionN
    *    - ImplicitFunctionN for N > 22 becomes FunctionXXL
    *    - ImplicitFunctionN for 22 > N >= 0 becomes FunctionN
+   *    - UnusedFunctionN becomes Function0
+   *    - ImplicitUnusedFunctionN becomes Function0
    *    - anything else becomes a NoType
    */
   def erasedFunctionType(cls: Symbol): Type = {

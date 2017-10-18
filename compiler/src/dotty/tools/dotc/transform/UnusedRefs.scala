@@ -17,6 +17,7 @@ import dotty.tools.dotc.transform.MegaPhase.MiniPhase
  *
  *   if   `unused val x: T = ...` including parameters
  *   then `x` --> `(default value for T)`
+ *        `x.Y`  -->  `T#Y`
  */
 class UnusedRefs extends MiniPhase with InfoTransformer {
   import tpd._
@@ -48,17 +49,17 @@ class UnusedRefs extends MiniPhase with InfoTransformer {
 
   /* Tree transform */
 
-  override def transformApply(tree: tpd.Apply)(implicit ctx: Context): tpd.Tree = transformUnused(tree)
-  override def transformIdent(tree: tpd.Ident)(implicit ctx: Context): tpd.Tree = transformUnused(tree)
-  override def transformSelect(tree: tpd.Select)(implicit ctx: Context): tpd.Tree = transformUnused(tree)
+  override def transformApply(tree: Apply)(implicit ctx: Context): Tree = transformUnused(tree)
+  override def transformIdent(tree: Ident)(implicit ctx: Context): Tree = transformUnused(tree)
+  override def transformSelect(tree: Select)(implicit ctx: Context): Tree = transformUnused(tree)
 
-  private def transformUnused(tree: tpd.Tree)(implicit ctx: Context): tpd.Tree = {
+  private def transformUnused(tree: Tree)(implicit ctx: Context): Tree = {
     if (!tree.symbol.is(Unused)) tree
     else {
       tree.tpe.widen match {
         case _: MethodType => tree // Do the transformation higher in the tree if needed
         case _ =>
-          val result = tpd.defaultValue(tree.tpe) match {
+          val result = defaultValue(tree.tpe) match {
             case t @ TypeApply(fun, args) => cpy.TypeApply(t)(fun = fun, args = args.map(transformAllDeep)) // asInstanceOf inserted by defaultValue
             case t => t
           }
@@ -70,7 +71,7 @@ class UnusedRefs extends MiniPhase with InfoTransformer {
     }
   }
 
-  override def transformTypeTree(tree: tpd.TypeTree)(implicit ctx: Context): tpd.Tree = {
+  override def transformTypeTree(tree: TypeTree)(implicit ctx: Context): Tree = {
     val newType = removeUnusedPaths(tree.tpe)
     if (tree.tpe == newType) tree
     else TypeTree(newType)
@@ -79,8 +80,7 @@ class UnusedRefs extends MiniPhase with InfoTransformer {
 
   /* Tree info */
 
-  override def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type =
-    removeUnusedPaths(tp)
+  override def transformInfo(tp: Type, sym: Symbol)(implicit ctx: Context): Type = removeUnusedPaths(tp)
 
   private def removeUnusedPaths(tp: Type)(implicit ctx: Context): Type = {
     // TODO: handle variance
