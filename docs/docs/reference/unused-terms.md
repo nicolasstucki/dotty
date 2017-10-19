@@ -49,10 +49,62 @@ methodWithUnusedEv(evidence1)
 methodWithUnusedEv(unusedEvidence2)
 ```
 
-Examples
---------
-TODO
+State machine example
+---------------------
+The following examples shows an implementation of a simple state machine which can be in a state `On` or `Off`.
+The machine can change state from `Off` to `On` with `turnedOn` only if it is currently `Off`, 
+conversely from `On` to `Off` with `turnedOff` only if it is currently `On`. These last constraint are
+captured with the `IsOff[S]` and `IsOn[S]` implicit evidence only exist for `IsOff[Off]` and `InOn[On]`. 
+For example, not allowing calling `turnedOff` on in an `Off` state as we would require an evidence `IsOn[Off]` 
+that will not be found.
+
+As the implicit evidences of `turnedOn` and `turnedOff` are not used in the bodies of those functions 
+we can mark them as `unused`. This will remove the evidence parameters at runtime, but we would still 
+evaluate the `isOn` and `isOff` implicits that where found as arguments.
+As `isOn` and `isOff` are not used except as as `unused` arguments, we can mark them as `unused`, hence 
+removing the evaluation of the `isOn` and `isOff` evidences.
 
 ```scala
+import scala.annotation.implicitNotFound
 
+sealed trait State
+final class On extends State
+final class Off extends State
+
+@implicitNotFound("State is must be Off")
+class IsOff[S <: State]
+object IsOff {
+  unused implicit def isOff: IsOff[Off] = new IsOff[Off]
+}
+
+@implicitNotFound("State is must be On")
+class IsOn[S <: State]
+object IsOn {
+  unused implicit def isOn: IsOn[On] = new IsOn[On]
+}
+
+class Machine[S <: State] private {
+  def turnedOn(implicit unused ev: IsOff[S]): Machine[On] = new Machine[On]
+  def turnedOff(implicit unused ev: IsOn[S]): Machine[Off] = new Machine[Off]
+}
+
+object Machine {
+  def newMachine(): Machine[Off] = new Machine[Off]
+}
+
+object Test {
+  def main(args: Array[String]): Unit = {
+    val m = Machine.newMachine()
+    m.turnedOn
+    m.turnedOn.turnedOff
+
+    // m.turnedOff
+    //            ^
+    //            State is must be On
+
+    // m.turnedOn.turnedOn
+    //                    ^
+    //                    State is must be Off
+  }
+}
 ```
