@@ -1,4 +1,5 @@
 unused
+selecting `d` from Vector(X4(1,s,1.1,true), X4(2,t,1.2,false))
 used
 X4.x4Repr
 Selector.caseFound
@@ -6,4 +7,5 @@ Selector.caseRecur
 Selector.caseRecur
 Selector.caseRecur
 Exists.derive
+selecting `d` from Vector(X4(1,s,1.1,true), X4(2,t,1.2,false))
 end

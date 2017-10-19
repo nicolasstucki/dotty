@@ -36,20 +36,39 @@ object Selector {
 // ----------------------------------------------------------------------------
 
 trait Dataset[T] {
-  def select[A](c: Column[T, A]): Dataset[A] =
-    this.asInstanceOf[Dataset[A]] // Use c.label to do an untyped select on actual Spark Dataset, and
+
+  def select[A](c: Column[T, A]): Dataset[A] = new SelectedDataset[T, A](this, c)
+  // Use c.label to do an untyped select on actual Spark Dataset, and
   // cast the result to TypedDataset[A]
 
   def col[S <: String, A](s: S)(implicit unused ev: Exists[T, s.type, A]) =
-    new Column[T, A](s) // ev is only here to check than this is safe, it's
-  // never used at runtime!
+    new Column[T, A](s) // ev is only here to check than this is safe, it's never used at runtime!
 
-  def collect(): Vector[T] =
-    Vector.empty[T] // Uses collect of the underlying Spark structure plus a cast
+  def collect(): Vector[T]
+}
+
+class SelectedDataset[T, A](ds: Dataset[T], val col: Column[T, A]) extends Dataset[A] {
+  def collect(): Vector[A] = {
+    // This would use collect of the underlying Spark structure plus a cast
+    ds match { // Dummy implementation
+      case SeqDataset(data) =>
+        println(s"selecting `${col.label}` from $data")
+        col.label match {
+          case "a" => data.map(_.asInstanceOf[X4[A,_,_,_]].a).toVector
+          case "b" => data.map(_.asInstanceOf[X4[_,A,_,_]].b).toVector
+          case "c" => data.map(_.asInstanceOf[X4[_,_,A,_]].c).toVector
+          case "d" => data.map(_.asInstanceOf[X4[_,_,_,A]].d).toVector
+        }
+    }
+  }
+}
+
+case class SeqDataset[T](data: Seq[T]) extends Dataset[T] {
+  override def collect(): Vector[T] = data.toVector
 }
 
 object Dataset {
-  def create[T](values: Seq[T]): Dataset[T] = new Dataset[T] { }
+  def create[T](values: Seq[T]): Dataset[T] = new SeqDataset[T](values)
 }
 
 /** Expression used in `select`-like constructions.
@@ -115,15 +134,13 @@ object Test {
       println("unused")
       val unusedD = ds.col("d")
       val outSpark1: Vector[Boolean] = ds.select(unusedD).collect()
-      // FIXME implement Dataset opertations
-      // assert(outSpark1 == outColl)
+      assert(outSpark1 == outColl)
     }
 
     println("used")
     val usedD = ds.col("d")
     val outSpark2: Vector[Boolean] = ds.select(usedD).collect()
-    // FIXME implement Dataset opertations
-    // assert(outSpark2 == outColl)
+    assert(outSpark2 == outColl)
 
     println("end")
   }
