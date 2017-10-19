@@ -5,14 +5,42 @@ title: "Unused Parameters"
 
 Why unused parameters?
 ----------------------
-TODO
+The following examples shows an implementation of a simple state machine which can be in a state `On` or `Off`.
+The machine can change state from `Off` to `On` with `turnedOn` only if it is currently `Off`. This last constraint is
+captured with the `IsOff[S]` implicit evidence which only exists for `IsOff[Off]`.
+For example, not allowing calling `turnedOn` on in an `On` state as we would require an evidence of type `IsOff[On]` that will not be found.
+
+```scala
+sealed trait State
+final class On extends State
+final class Off extends State
+
+@implicitNotFound("State is must be Off")
+class IsOff[S <: State]
+object IsOff {
+  implicit def isOff: IsOff[Off] = new IsOff[Off]
+}
+
+class Machine[S <: State] {
+  def turnedOn(implicit ev: IsOff[S]): Machine[On] = new Machine[On]
+}
+
+val m = new Machine[Off]
+m.turnedOn
+m.turnedOn.turnedOn // ERROR
+//                 ^
+//                  State is must be Off
+```
+
+These constraint that only depend on the types at the call site are completly resolved at compile time and never used at runtime.
+As these parameters are never used at runtime there is not real need to have them around, but they still need to be
+present at runtime to be able to do separate compilation and retain binary compatiblity. Unused parameters are contractually
+obligated to not be used at runtime, enforcing the essence of evidences on types and allows them to always be optimized away.
 
 
-What are unused parameter?
---------------------------
-Unused parameter are values that are know not to be used. Parameters of methods and functions 
-can be declared as unused. Those parameters wont be usable for computations, thought they can 
-be used as arguments to other unused parameters.
+How to define unused parameter?
+-------------------------------
+Parameters of methods and functions can be declared as unused, placing `unused` at the start of the parameter list (like `implicit`).
 
 ```scala
 def methodWithUnusedEv(unused ev: Ev): Int = 42
@@ -21,8 +49,17 @@ val lambdaWithUnusedEv: unused Ev => Int =
   unused (ev: Ev) => 42
 ```
 
-Not only parameters can be marked as unused, `val` and `def` can also be marked with `unused`.
-The will also only be usable as arguments to `unused` parameters.
+Those parameters will not be usable for computations, thought they can be used as arguments to other `unused` parameters.
+
+```scala
+def methodWithUnusedInt1(unused i: Int): Int =
+  i + 42 // ERROR: can not use i
+
+def methodWithUnusedInt2(unused i: Int): Int =
+  methodWithUnusedInt1(i) // OK
+```
+
+Not only parameters can be marked as unused, `val` and `def` can also be marked with `unused`. These will also only be usable as arguments to `unused` parameters.
 
 ```scala
 unused val unusedEvidence: Ev = ...
@@ -49,9 +86,9 @@ methodWithUnusedEv(evidence1)
 methodWithUnusedEv(unusedEvidence2)
 ```
 
-State machine example
----------------------
-The following examples shows an implementation of a simple state machine which can be in a state `On` or `Off`.
+State machine with unused evidence example
+------------------------------------------
+The following examples is an extended implementation of a simple state machine which can be in a state `On` or `Off`.
 The machine can change state from `Off` to `On` with `turnedOn` only if it is currently `Off`, 
 conversely from `On` to `Off` with `turnedOff` only if it is currently `On`. These last constraint are
 captured with the `IsOff[S]` and `IsOn[S]` implicit evidence only exist for `IsOff[Off]` and `InOn[On]`. 
@@ -74,16 +111,19 @@ final class Off extends State
 @implicitNotFound("State is must be Off")
 class IsOff[S <: State]
 object IsOff {
+  // def isOff will not exist at runtime
   unused implicit def isOff: IsOff[Off] = new IsOff[Off]
 }
 
 @implicitNotFound("State is must be On")
 class IsOn[S <: State]
 object IsOn {
-  unused implicit def isOn: IsOn[On] = new IsOn[On]
+  // val isOn will not exist at runtime
+  unused implicit val isOn: IsOn[On] = new IsOn[On]
 }
 
 class Machine[S <: State] private {
+  // ev will disapear from both functions
   def turnedOn(implicit unused ev: IsOff[S]): Machine[On] = new Machine[On]
   def turnedOff(implicit unused ev: IsOn[S]): Machine[Off] = new Machine[Off]
 }
