@@ -12,6 +12,8 @@ final case class TestFlags(
     TestFlags(defaultClassPath, runClassPath, options diff flags)
 
   def all: Array[String] = Array("-classpath", defaultClassPath) ++ options
+
+  def isLinkTest: Boolean = options.contains("-Xlink")
 }
 
 object TestFlags {

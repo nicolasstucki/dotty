@@ -1005,18 +1005,22 @@ trait ParallelTesting extends RunnerOrchestration { self =>
   }
 
   /** Create out directory for directory `d` */
-  private def createOutputDirsForDir(d: JFile, sourceDir: JFile, outDir: String): JFile = {
+  private def createOutputDirsForDir(d: JFile, sourceDir: JFile, outDir: String, flags: TestFlags): JFile = {
     val targetDir = new JFile(outDir + s"${sourceDir.getName}/${d.getName}")
     targetDir.mkdirs()
-    targetDir
+    jaredIfNeeded(targetDir, flags)
   }
 
   /** Create out directory for `file` */
-  private def createOutputDirsForFile(file: JFile, sourceDir: JFile, outDir: String): JFile = {
+  private def createOutputDirsForFile(file: JFile, sourceDir: JFile, outDir: String, flags: TestFlags): JFile = {
     val uniqueSubdir = file.getName.substring(0, file.getName.lastIndexOf('.'))
     val targetDir = new JFile(outDir + s"${sourceDir.getName}/$uniqueSubdir")
     targetDir.mkdirs()
-    targetDir
+    jaredIfNeeded(targetDir, flags)
+  }
+
+  private def jaredIfNeeded(targetDir: JFile, flags: TestFlags): JFile = {
+    new JFile(targetDir + (if (flags.isLinkTest) "/linked.jar" else ""))
   }
 
   /** Make sure that directory string is as expected */
@@ -1078,7 +1082,7 @@ trait ParallelTesting extends RunnerOrchestration { self =>
       callingMethod,
       Array(sourceFile),
       flags,
-      createOutputDirsForFile(sourceFile, parent, outDir)
+      createOutputDirsForFile(sourceFile, parent, outDir, flags)
     )
     new CompilationTest(target)
   }
@@ -1158,9 +1162,11 @@ trait ParallelTesting extends RunnerOrchestration { self =>
 
     val (dirs, files) = compilationTargets(sourceDir)
 
+    def createOutputDirsFor(f: JFile): JFile = createOutputDirsForFile(f, sourceDir, outDir, flags)
+
     val targets =
-      files.map(f => JointCompilationSource(callingMethod, Array(f), flags, createOutputDirsForFile(f, sourceDir, outDir))) ++
-      dirs.map(dir => SeparateCompilationSource(callingMethod, dir, flags, createOutputDirsForDir(dir, sourceDir, outDir)))
+      files.map(f => JointCompilationSource(callingMethod, Array(f), flags, createOutputDirsForFile(f, sourceDir, outDir, flags))) ++
+      dirs.map(dir => SeparateCompilationSource(callingMethod, dir, flags, createOutputDirsForDir(dir, sourceDir, outDir, flags)))
 
     // Create a CompilationTest and let the user decide whether to execute a pos or a neg test
     new CompilationTest(targets)
@@ -1179,7 +1185,7 @@ trait ParallelTesting extends RunnerOrchestration { self =>
     val (_, files) = compilationTargets(sourceDir)
 
     val targets = files.map { file =>
-      JointCompilationSource(callingMethod, Array(file), flags, createOutputDirsForFile(file, sourceDir, outDir))
+      JointCompilationSource(callingMethod, Array(file), flags, createOutputDirsForFile(file, sourceDir, outDir, flags))
     }
 
     // Create a CompilationTest and let the user decide whether to execute a pos or a neg test
