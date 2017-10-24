@@ -522,9 +522,11 @@ object Build {
           case (beforeCp, rest) => beforeCp ++ rest
         }
 
-        (runMain in Compile).toTask(
-          s" dotty.tools.dotc.Main " + fullArgs.mkString(" ")
-        )
+        val main =
+          if (fullArgs.contains("-Xlink-optimise")) "dotty.tools.dotc.FromTasty"
+          else "dotty.tools.dotc.Main"
+
+        (runMain in Compile).toTask((main +: fullArgs).mkString(" ", " ", ""))
       }.evaluated,
       dotc := run.evaluated,
 

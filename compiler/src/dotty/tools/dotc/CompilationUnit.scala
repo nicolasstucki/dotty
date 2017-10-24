@@ -1,9 +1,7 @@
 package dotty.tools
 package dotc
 
-import dotty.tools.dotc.core.Types.Type
-import dotty.tools.dotc.core.tasty.{TastyUnpickler, TastyBuffer, TastyPickler}
-import util.SourceFile
+import util._
 import ast.{tpd, untpd}
 import dotty.tools.dotc.ast.tpd.{ Tree, TreeTraverser }
 import dotty.tools.dotc.core.Contexts.Context
@@ -28,7 +26,7 @@ object CompilationUnit {
 
   /** Make a compilation unit for top class `clsd` with the contends of the `unpickled` */
   def mkCompilationUnit(clsd: ClassDenotation, unpickled: Tree, forceTrees: Boolean)(implicit ctx: Context): CompilationUnit = {
-    val unit1 = new CompilationUnit(new SourceFile(clsd.symbol.sourceFile, Seq()))
+    val unit1 = new CompilationUnit(new SourceFile(clsd.symbol.associatedFile, Seq()))
     unit1.tpdTree = unpickled
     if (forceTrees)
       force.traverse(unit1.tpdTree)
