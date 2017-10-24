@@ -27,7 +27,8 @@ object EtaExpansion {
     else {
       val name = UniqueName.fresh(prefix)
       val liftedType = fullyDefinedType(expr.tpe.widen, "lifted expression", expr.pos)
-      val sym = ctx.newSymbol(ctx.owner, name, EmptyFlags, liftedType, coord = positionCoord(expr.pos))
+      val flags = expr.symbol.flags & Unused | Synthetic
+      val sym = ctx.newSymbol(ctx.owner, name, flags, liftedType, coord = positionCoord(expr.pos))
       defs += ValDef(sym, expr).withPos(expr.pos.focus)
       ref(sym.termRef).withPos(expr.pos)
     }
