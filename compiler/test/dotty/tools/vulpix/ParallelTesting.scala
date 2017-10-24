@@ -52,7 +52,10 @@ trait ParallelTesting extends RunnerOrchestration { self =>
     def outDir: JFile
     def flags: TestFlags
 
-    def runClassPath: String = outDir.getAbsolutePath + ":" + flags.runClassPath
+    def runClassPath: String = {
+      val out = outDir.getAbsolutePath + (if (flags.isLinkedOptimised) "/linked.jar" else "")
+      out + ":" + flags.runClassPath
+    }
 
     def title: String = self match {
       case self: JointCompilationSource =>

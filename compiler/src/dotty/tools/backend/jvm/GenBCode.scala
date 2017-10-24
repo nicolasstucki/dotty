@@ -26,6 +26,7 @@ import Denotations._
 import Phases._
 import java.lang.AssertionError
 import java.io.{DataOutputStream, File => JFile}
+import dotty.tools.io.{Jar, File, Directory}
 
 import scala.tools.asm
 import scala.tools.asm.tree._
@@ -49,10 +50,24 @@ class GenBCode extends Phase {
   def outputDir(implicit ctx: Context): AbstractFile =
     new PlainDirectory(ctx.settings.outputDir.value)
 
+  private[this] var classFileOutput: AbstractFile = _
+
   def run(implicit ctx: Context): Unit = {
     new GenBCodePipeline(entryPoints.toList,
-        new DottyBackendInterface(outputDir, superCallsMap.toMap)(ctx))(ctx).run(ctx.compilationUnit.tpdTree)
+        new DottyBackendInterface(classFileOutput, superCallsMap.toMap)(ctx))(ctx).run(ctx.compilationUnit.tpdTree)
     entryPoints.clear()
+  }
+
+  override def runOn(units: List[CompilationUnit])(implicit ctx: Context) = {
+    val out = outputDir
+    lazy val tmp = out.subdirectoryNamed("tmp-" + System.currentTimeMillis().toHexString)
+    classFileOutput = if (ctx.settings.XlinkOptimise.value) tmp else out
+    val res = super.runOn(units)
+    if (ctx.settings.XlinkOptimise.value) {
+      Jar.create(new File(out.fileNamed("linked.jar").file), new Directory(classFileOutput.file), mainClass = "")
+      tmp.delete()
+    }
+    res
   }
 }
 
