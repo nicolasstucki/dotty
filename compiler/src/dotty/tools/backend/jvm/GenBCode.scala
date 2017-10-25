@@ -34,7 +34,7 @@ import dotty.tools.dotc.util.{DotClass, Positions}
 import tpd._
 import StdNames._
 
-import dotty.tools.io.{AbstractFile, Directory, PlainDirectory}
+import dotty.tools.io._
 
 class GenBCode extends Phase {
   def phaseName: String = "genBCode"
@@ -60,13 +60,14 @@ class GenBCode extends Phase {
 
   override def runOn(units: List[CompilationUnit])(implicit ctx: Context) = {
     val out = outputDir
-    lazy val tmp = out.subdirectoryNamed("tmp-" + System.currentTimeMillis().toHexString)
-    classFileOutput = if (ctx.settings.XlinkOptimise.value) tmp else out
+    val toJar = out.name.endsWith(".jar")
+    println(out)
+    println(toJar)
+    lazy val tmp = new VirtualDirectory("tmp-" + System.currentTimeMillis().toHexString, None)
+    classFileOutput = if (toJar) tmp else out
     val res = super.runOn(units)
-    if (ctx.settings.XlinkOptimise.value) {
-      Jar.create(new File(out.fileNamed("linked.jar").file), new Directory(classFileOutput.file), mainClass = "")
-      tmp.delete()
-    }
+    if (toJar)
+      Jar.create(new File(outputDir.file), new Directory(tmp.file), mainClass = "")
     res
   }
 }

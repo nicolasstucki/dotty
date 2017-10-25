@@ -164,6 +164,7 @@ object Settings {
         case (DirectoryTag, arg :: args) =>
           val path = Path(arg)
           if (path.isDirectory) update(Directory(path), args)
+          else if (path.extension == "jar") update(path, args)
           else fail(s"'$arg' does not exist or is not a directory", args)
         case (_, Nil) =>
           missingArg
@@ -286,7 +287,7 @@ object Settings {
     def OptionSetting[T: ClassTag](name: String, descr: String): Setting[Option[T]] =
       publish(Setting(name, descr, None, propertyClass = Some(implicitly[ClassTag[T]].runtimeClass)))
 
-    def DirectorySetting(name: String, helpArg: String, descr: String, default: Directory): Setting[Directory] =
+    def DirectorySetting(name: String, helpArg: String, descr: String, default: Directory): Setting[Path] =
       publish(Setting(name, descr, default, helpArg))
   }
 }

@@ -34,8 +34,11 @@ class LinkAll extends Phase {
       }
     }
 
-    if (ctx.settings.XlinkOptimise.value) allUnits(Set.empty, units.toSet, Set.empty)
-    else units
+    if (ctx.settings.XlinkOptimise.value) {
+      if (!ctx.settings.outputDir.value.endsWith(".jar"))
+        ctx.error("With " + ctx.settings.XlinkOptimise.name + " the output directory " + ctx.settings.outputDir.name + " should be a .jar")
+      allUnits(Set.empty, units.toSet, Set.empty)
+    } else units
   }
 
   /** Collects all class denotations that may need to be loaded. */
