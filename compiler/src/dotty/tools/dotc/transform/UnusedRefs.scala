@@ -44,13 +44,9 @@ class UnusedRefs extends MiniPhase {
       tree.tpe.widen match {
         case _: MethodType => tree // Do the transformation higher in the tree if needed
         case _ =>
-          val result = defaultValue(tree.tpe) match {
-            case t @ TypeApply(fun, args) => cpy.TypeApply(t)(fun = fun, args = args.map(transformAllDeep)) // asInstanceOf inserted by defaultValue
-            case t => t
-          }
           tree match {
-            case _: RefTree => result
-            case Apply(_ , args) => seq(args, result)
+            case _: RefTree => defaultValue(tree.tpe)
+            case Apply(_ , args) => seq(args, defaultValue(tree.tpe))
           }
       }
     }
