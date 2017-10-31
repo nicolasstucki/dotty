@@ -17,21 +17,6 @@ final case class R[K <: String, V](v: V)
 
 trait Selector[L <: HList, K, V]
 
-object Selector {
-  implicit def caseFound[T <: HList, K <: String, V]
-  : Selector[R[K, V] :: T, K, V] = {
-    println("Selector.caseFound")
-    null
-  }
-
-  implicit def caseRecur[H, T <: HList, K <: String, V]
-  (implicit i: Selector[T, K, V])
-  : Selector[H :: T, K, V] = {
-    println("Selector.caseRecur")
-    null
-  }
-}
-
 // Subset of Frameless
 // ----------------------------------------------------------------------------
 
@@ -83,24 +68,36 @@ case class Column[T, A](label: String)
 @implicitNotFound(msg = "No column ${K} in type ${T}")
 trait Exists[T, K, V]
 
-object Exists {
-  implicit def derive[T, H <: HList, K, V]
-  (implicit
-   g: LabelledGeneric[T] { type Repr = H },
-   s: Selector[H, K, V]
-  ): Exists[T, K, V] = {
+object UsedExists {
+  implicit def derive[T, H <: HList, K, V](implicit g: LabelledGeneric[T] { type Repr = H }, s: Selector[H, K, V]): Exists[T, K, V] = {
     println("Exists.derive")
+    null
+  }
+
+  implicit def caseFound[T <: HList, K <: String, V]: Selector[R[K, V] :: T, K, V] = {
+    println("Selector.caseFound")
+    null
+  }
+
+  implicit def caseRecur[H, T <: HList, K <: String, V](implicit i: Selector[T, K, V]): Selector[H :: T, K, V] = {
+    println("Selector.caseRecur")
     null
   }
 }
 
 object UnusedExists {
-  implicit unused def derive[T, H <: HList, K, V]
-  (implicit
-   g: LabelledGeneric[T] { type Repr = H },
-   s: Selector[H, K, V]
-  ): Exists[T, K, V] = {
+  implicit unused def derive[T, H <: HList, K, V](implicit unused g: LabelledGeneric[T] { type Repr = H }, s: Selector[H, K, V] ): Exists[T, K, V] = {
     println("UnusedExists.derive")
+    null
+  }
+
+  unused implicit def caseFound[T <: HList, K <: String, V]: Selector[R[K, V] :: T, K, V] = {
+    println("Selector.caseFound")
+    null
+  }
+
+  unused implicit def caseRecur[H, T <: HList, K <: String, V](implicit i: Selector[T, K, V]): Selector[H :: T, K, V] = {
+    println("Selector.caseRecur")
     null
   }
 }
@@ -110,9 +107,19 @@ object UnusedExists {
 
 case class X4[A, B, C, D](a: A, b: B, c: C, d: D)
 
-object X4 {
+object UsedX4 {
   // Macro generated
   implicit def x4Repr[A, B, C, D]: LabelledGeneric[X4[A, B, C, D]] {
+    type Repr = R["a", A] :: R["b", B] :: R["c", C] :: R["d", D] :: HNil
+  } = {
+    println("X4.x4Repr")
+    null
+  }
+}
+
+object UnusedX4 {
+  // Macro generated
+  implicit unused def x4Repr[A, B, C, D]: LabelledGeneric[X4[A, B, C, D]] {
     type Repr = R["a", A] :: R["b", B] :: R["c", C] :: R["d", D] :: HNil
   } = {
     println("X4.x4Repr")
@@ -131,16 +138,21 @@ object Test {
 
     {
       import UnusedExists._
+      import UnusedX4._
       println("unused")
       val unusedD = ds.col("d")
       val outSpark1: Vector[Boolean] = ds.select(unusedD).collect()
       assert(outSpark1 == outColl)
     }
 
-    println("used")
-    val usedD = ds.col("d")
-    val outSpark2: Vector[Boolean] = ds.select(usedD).collect()
-    assert(outSpark2 == outColl)
+    {
+      import UsedExists._
+      import UsedX4._
+      println("used")
+      val usedD = ds.col("d")
+      val outSpark2: Vector[Boolean] = ds.select(usedD).collect()
+      assert(outSpark2 == outColl)
+    }
 
     println("end")
   }

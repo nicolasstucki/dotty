@@ -28,12 +28,13 @@ class UnusedRefs extends MiniPhase {
 
   /** Check what the phase achieves, to be called at any point after it is finished. */
   override def checkPostCondition(tree: Tree)(implicit ctx: Context): Unit = tree match {
-    case _: Apply | _: RefTree => assert(!tree.symbol.is(Unused))
+    case _: Apply | _: TypeApply | _: RefTree => assert(!tree.symbol.is(Unused), tree)
     case _ =>
   }
 
   /* Tree transform */
 
+  override def transformTypeApply(tree: TypeApply)(implicit ctx: Context): Tree = transformUnused(tree)
   override def transformApply(tree: Apply)(implicit ctx: Context): Tree = transformUnused(tree)
   override def transformIdent(tree: Ident)(implicit ctx: Context): Tree = transformUnused(tree)
   override def transformSelect(tree: Select)(implicit ctx: Context): Tree = transformUnused(tree)
@@ -42,11 +43,16 @@ class UnusedRefs extends MiniPhase {
     if (!tree.symbol.is(Unused)) tree
     else {
       tree.tpe.widen match {
-        case _: MethodType => tree // Do the transformation higher in the tree if needed
+        case _: MethodOrPoly => tree // Do the transformation higher in the tree if needed
         case _ =>
           tree match {
-            case _: RefTree => defaultValue(tree.tpe)
-            case Apply(_ , args) => seq(args, defaultValue(tree.tpe))
+            case _: RefTree | _: TypeApply => defaultValue(tree.tpe)
+            case Apply(_ , args) =>
+            def allArgs(t: Tree, acc: List[Tree]): List[Tree] = t match {
+              case Apply(fun, args) => allArgs(fun, args ::: acc)
+              case _ => acc
+            }
+            seq(allArgs(tree, Nil), defaultValue(tree.tpe))
           }
       }
     }
