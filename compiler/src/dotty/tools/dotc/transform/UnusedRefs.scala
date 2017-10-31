@@ -45,15 +45,13 @@ class UnusedRefs extends MiniPhase {
       tree.tpe.widen match {
         case _: MethodOrPoly => tree // Do the transformation higher in the tree if needed
         case _ =>
-          tree match {
-            case _: RefTree | _: TypeApply => defaultValue(tree.tpe)
-            case Apply(_ , args) =>
-            def allArgs(t: Tree, acc: List[Tree]): List[Tree] = t match {
-              case Apply(fun, args) => allArgs(fun, args ::: acc)
-              case _ => acc
-            }
-            seq(allArgs(tree, Nil), defaultValue(tree.tpe))
+          def qualAndArgs(t: Tree, acc: List[Tree]): List[Tree] = t match {
+            case TypeApply(fun, _) => qualAndArgs(fun, acc)
+            case Apply(fun, args) => qualAndArgs(fun, args ::: acc)
+            case Select(qual, _) => qual :: acc
+            case _ => acc
           }
+          seq(qualAndArgs(tree, Nil), defaultValue(tree.tpe))
       }
     }
   }
