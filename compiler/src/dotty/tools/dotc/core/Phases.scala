@@ -213,6 +213,7 @@ object Phases {
     private[this] var myPicklerPhase: Phase = _
     private[this] var myRefChecksPhase: Phase = _
     private[this] var myPatmatPhase: Phase = _
+    private[this] var mySpecialized1Phase: Phase = _
     private[this] var myElimRepeatedPhase: Phase = _
     private[this] var myExtensionMethodsPhase: Phase = _
     private[this] var myExplicitOuterPhase: Phase = _
@@ -227,6 +228,7 @@ object Phases {
     final def picklerPhase = myPicklerPhase
     final def refchecksPhase = myRefChecksPhase
     final def patmatPhase = myPatmatPhase
+    final def specialized1Phase = mySpecialized1Phase
     final def elimRepeatedPhase = myElimRepeatedPhase
     final def extensionMethodsPhase = myExtensionMethodsPhase
     final def explicitOuterPhase = myExplicitOuterPhase
@@ -244,6 +246,7 @@ object Phases {
       myPicklerPhase = phaseOfClass(classOf[Pickler])
       myRefChecksPhase = phaseOfClass(classOf[RefChecks])
       myElimRepeatedPhase = phaseOfClass(classOf[ElimRepeated])
+      mySpecialized1Phase = phaseOfClass(classOf[Specialized1])
       myExtensionMethodsPhase = phaseOfClass(classOf[ExtensionMethods])
       myErasurePhase = phaseOfClass(classOf[Erasure])
       myElimErasedValueTypePhase = phaseOfClass(classOf[ElimErasedValueType])

@@ -782,9 +782,9 @@ object SymDenotations {
     def matchNullaryLoosely(implicit ctx: Context): Boolean = {
       def test(sym: Symbol) =
         sym.is(JavaDefined) ||
-          sym.owner == defn.AnyClass ||
-          sym == defn.Object_clone ||
-          sym.owner.is(Scala2x)
+        sym.owner == defn.AnyClass ||
+        sym == defn.Object_clone ||
+        sym.owner.is(Scala2x)
       this.exists && (test(symbol) || allOverriddenSymbols.exists(test))
     }
 

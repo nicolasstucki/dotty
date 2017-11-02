@@ -95,18 +95,17 @@ class CompilationTests extends ParallelTesting {
     compileFilesInDir("../tests/pos", defaultOptions) +
     compileFilesInDir("../tests/pos-deep-subtype", allowDeepSubtypes) +
     // specialize test
-    compileFilesInDir("../tests/pos", defaultOptions :+ "-specializeAll") +
-    compileFile("../tests/run/specialized-1.scala", defaultOptions :+ "-specializeAll" :+ "-specializedForAll") +
-    compileFile("../tests/run/specialized-2.scala", defaultOptions :+ "-specializeAll" :+ "-specializedForAll") // +
-    //
-    // compileFile(
-    //   // succeeds despite -Xfatal-warnings because of -nowarn
-    //   "../tests/neg/customArgs/xfatalWarnings.scala",
-    //   defaultOptions.and("-nowarn", "-Xfatal-warnings")
-    // )
+    compileFilesInDir("../tests/pos", defaultOptions and "-specializeAll") +
+    compileFile("../tests/run/specialized-1.scala", defaultOptions and "-specializeAll" and "-specializedForAll") +
+    compileFile("../tests/run/specialized-2.scala", defaultOptions and "-specializeAll" and "-specializedForAll") +
+    compileFile(
+      // succeeds despite -Xfatal-warnings because of -nowarn
+      "../tests/neg/customArgs/xfatalWarnings.scala",
+      defaultOptions.and("-nowarn", "-Xfatal-warnings")
+    )
   }.checkCompile()
 
-   def posTwice: Unit = {
+  @Test def posTwice: Unit = {
     compileFile("../tests/pos/Labels.scala", defaultOptions) +
     compileFilesInDir("../tests/pos-java-interop", defaultOptions) +
     compileFile("../tests/pos/t2168.scala", defaultOptions) +

@@ -19,7 +19,7 @@ class Specialized2 extends MiniPhaseTransform { thisTransformer =>
   private var specialized1: Specialized1 = _
 
   override def prepareForUnit(tree: tpd.Tree)(implicit ctx: Context): TreeTransforms.TreeTransform = {
-    specialized1 = ctx.phaseOfClass(classOf[Specialized1]).asInstanceOf[Specialized1]
+    specialized1 = ctx.specialized1Phase.asInstanceOf[Specialized1]
     super.prepareForUnit(tree)
   }
 

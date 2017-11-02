@@ -14,7 +14,7 @@ final class SubstituteOuterTargs(outerTargs: OuterTargs)(implicit ctx: Context) 
             assert(t.underlying.isInstanceOf[TermType])
             t.underlying
           case t: ClassInfo =>
-            t.typeRef
+            t.appliedRef
           case _ =>
             assert(false)
             null
@@ -25,7 +25,7 @@ final class SubstituteOuterTargs(outerTargs: OuterTargs)(implicit ctx: Context) 
     val res = tp match {
       case tp: RefinedType => mapOver(tp) // otherwise we will loose refinement
       case tp: TypeAlias => mapOver(tp) // map underlying
-      case tp: HKApply => mapOver(tp) // map underlying
+      case tp: AppliedType => mapOver(tp) // map underlying
       case _ if tp.typeSymbol.exists && substitution.nonEmpty =>
         var typ = tp
         var id = substitution.find(x => x._1 == tp.typeSymbol.name)
