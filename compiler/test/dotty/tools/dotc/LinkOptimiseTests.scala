@@ -36,22 +36,31 @@ class LinkOptimiseTests extends ParallelTesting {
       compileDir("../tests/link/custom-lib", defaultOptions)
 
     val libraries = {
-      strawmanLibrary +
+//      strawmanLibrary +
       linkCustomLib
     }.keepOutput.checkCompile()
 
     // Setup class paths
+    def mkClassFlags(libPath: String) =
+      TestFlags(mkClassPath(libPath :: Jars.dottyTestDeps), mkClassPath(Jars.dottyTestDeps), basicDefaultOptions)
     def mkLinkClassFlags(libPath: String) =
       TestFlags(mkClassPath(libPath :: Jars.dottyTestDeps), mkClassPath(Jars.dottyTestDeps), basicDefaultOptions :+ "-Xlink")
-    val strawmanClassPath = mkLinkClassFlags(defaultOutputDir + "strawmanLibrary/main/")
-    val customLibClassFlags = mkLinkClassFlags(defaultOutputDir + "linkCustomLib/custom-lib")
+//    val strawmanClassPath = mkClassFlags(defaultOutputDir + "strawmanLibrary/main/")
+    val customLibClassFlags = mkClassFlags(defaultOutputDir + "linkCustomLib/custom-lib")
+
+//    val strawmanLinkClassPath = mkLinkClassFlags(defaultOutputDir + "strawmanLibrary/main/")
+    val customLibLinkClassFlags = mkLinkClassFlags(defaultOutputDir + "linkCustomLib/custom-lib")
 
     // Link tests
     val linkDir = "../tests/link"
     val linkStramanDir = linkDir + "/strawman"
     val linkCustomLibDir = linkDir + "/on-custom-lib"
-    def linkStrawmanTest = compileFilesInDir(linkStramanDir, strawmanClassPath)
+//    def linkStrawmanTest = (
+//      compileFilesInDir(linkStramanDir, strawmanClassPath),
+//      compileFilesInDir(linkStramanDir, strawmanLinkClassPath)
+//    )
     def linkCustomLibTest = compileFilesInDir(linkCustomLibDir, customLibClassFlags)
+    def linkCustomLibTest2 = compileFilesInDir("../out/linkCustomLibTest/on-custom-lib", customLibLinkClassFlags)
 
     def classFileChecks(sourceDir: String, testName: String) = {
       val checkExt = ".classcheck"
@@ -69,16 +78,21 @@ class LinkOptimiseTests extends ParallelTesting {
     }
 
     // Run all tests
-    val tests = {
-      linkStrawmanTest +
+    val testsCompile = {
+//      linkStrawmanTest._1 +
       linkCustomLibTest
+    }.keepOutput.checkCompile()
+
+    val testLinking = { // FIXME ignore sources in tests
+//      linkStrawmanTest._2 +
+      linkCustomLibTest2
     }.keepOutput.checkRuns()
 
     try {
-      classFileChecks(linkStramanDir, "linkStrawmanTest")
+//      classFileChecks(linkStramanDir, "linkStrawmanTest")
       classFileChecks(linkCustomLibDir, "linkCustomLibTest")
     } finally {
-      (libraries + tests).delete()
+//      (libraries + testsCompile + testLinking).delete()
     }
   }
 
