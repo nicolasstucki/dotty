@@ -373,6 +373,7 @@ object Flags {
   /** Labeled with `unused` modifier (unused value)  */
   final val UnusedCommon = commonFlag(42, "unused")
   final val Unused = UnusedCommon.toTermFlags
+  final val UnusedType = UnusedCommon.toTypeFlags
 
   // Flags following this one are not pickled
 

@@ -25,7 +25,7 @@ class UnusedChecks extends MiniPhase {
   /* Tree transform */
 
   override def transformTypeDef(tree: TypeDef)(implicit ctx: Context): tree.type = {
-    if (tree.symbol.is(UnusedCommon))
+    if (tree.symbol.is(UnusedType))
       ctx.error(tree.symbol.showKind + " cannot be unused", tree.pos)
     tree
   }
