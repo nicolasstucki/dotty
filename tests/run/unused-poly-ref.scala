@@ -6,7 +6,7 @@ object Test {
 
   def fun(unused a: Int): Unit = println("fun")
 
-  unused def foo[P](unused x: Int)(unused y: Int): Int = x
+  def foo[P](unused x: Int)(unused y: Int): Int = 0
 
   def bar(x: Int) =  {
     println(x)

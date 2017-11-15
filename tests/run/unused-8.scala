@@ -1,16 +1,19 @@
 object Test {
 
   def main(args: Array[String]): Unit = {
-    fun(foo)
+    def f(unused i: Int) = {
+      new Foo(foo)(i)
+    }
+    f(foo)
   }
 
-  def foo = {
+  def foo: Int = {
     println("foo")
     42
   }
 
-  unused def fun(unused a: Int): Int = {
-    println("fun")
-    a
-  }
+}
+
+class Foo(a: Int)(unused b: Int) {
+  println("Foo")
 }

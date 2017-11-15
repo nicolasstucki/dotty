@@ -1,8 +1,9 @@
 object Test {
-  unused def foo: Foo = new Foo
-  foo.x() // error
-  foo.y // error
-  foo.z // error
+  def f(unused foo: Foo) = {
+    foo.x() // error
+    foo.y // error
+    foo.z // error
+  }
 }
 
 class Foo {

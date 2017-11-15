@@ -22,10 +22,6 @@ class UnusedRefs extends MiniPhase {
 
   override def phaseName: String = "unusedRefs"
 
-  override def runsAfterGroupsOf: Set[Class[_ <: Phases.Phase]] = Set(
-    classOf[UnusedChecks]
-  )
-
   /** Check what the phase achieves, to be called at any point after it is finished. */
   override def checkPostCondition(tree: Tree)(implicit ctx: Context): Unit = tree match {
     case _: Apply | _: TypeApply | _: RefTree => assert(!tree.symbol.is(Unused), tree)

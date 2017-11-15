@@ -6,11 +6,12 @@ object Test {
         x // error
       }
 
-    unused val f2: unused Int => Int =
+    val f2: unused Int => Int =
       unused (x: Int) => {
-        x
+        foo(x)
       }
 
+    def foo (unused i: Int) = 0
   }
 
 }

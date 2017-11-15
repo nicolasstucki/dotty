@@ -1,28 +1,19 @@
 object Test {
 
   def main(args: Array[String]): Unit = {
-    unusedFun0
-    unusedFun1()
-    unusedFun2(foo)
+    def f(unused i: Int) = {
+      new Foo(i)(foo)
+    }
+    f(5)
   }
 
-  def foo = {
+  def foo: Int = {
     println("foo")
     42
   }
 
-  unused def unusedFun0: Int = {
-    println("unusedFun0")
-    42
-  }
+}
 
-  unused def unusedFun1(): Int = {
-    println("unusedFun1")
-    42
-  }
-
-  unused def unusedFun2(a: Int): Int = {
-    println("unusedFun2")
-    42
-  }
+class Foo(unused a: Int)(b: Int) {
+  println("Foo")
 }

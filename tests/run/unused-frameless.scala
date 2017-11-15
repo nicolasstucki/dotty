@@ -68,7 +68,7 @@ case class Column[T, A](label: String)
 @implicitNotFound(msg = "No column ${K} in type ${T}")
 trait Exists[T, K, V]
 
-object UsedExists {
+object Exists {
   implicit def derive[T, H <: HList, K, V](implicit g: LabelledGeneric[T] { type Repr = H }, s: Selector[H, K, V]): Exists[T, K, V] = {
     println("Exists.derive")
     null
@@ -85,29 +85,12 @@ object UsedExists {
   }
 }
 
-object UnusedExists {
-  implicit unused def derive[T, H <: HList, K, V](implicit unused g: LabelledGeneric[T] { type Repr = H }, s: Selector[H, K, V] ): Exists[T, K, V] = {
-    println("UnusedExists.derive")
-    null
-  }
-
-  unused implicit def caseFound[T <: HList, K <: String, V]: Selector[R[K, V] :: T, K, V] = {
-    println("Selector.caseFound")
-    null
-  }
-
-  unused implicit def caseRecur[H, T <: HList, K <: String, V](implicit i: Selector[T, K, V]): Selector[H :: T, K, V] = {
-    println("Selector.caseRecur")
-    null
-  }
-}
-
 // X4 Example
 // ----------------------------------------------------------------------------
 
 case class X4[A, B, C, D](a: A, b: B, c: C, d: D)
 
-object UsedX4 {
+object X4 {
   // Macro generated
   implicit def x4Repr[A, B, C, D]: LabelledGeneric[X4[A, B, C, D]] {
     type Repr = R["a", A] :: R["b", B] :: R["c", C] :: R["d", D] :: HNil
@@ -117,17 +100,9 @@ object UsedX4 {
   }
 }
 
-object UnusedX4 {
-  // Macro generated
-  implicit unused def x4Repr[A, B, C, D]: LabelledGeneric[X4[A, B, C, D]] {
-    type Repr = R["a", A] :: R["b", B] :: R["c", C] :: R["d", D] :: HNil
-  } = {
-    println("X4.x4Repr")
-    null
-  }
-}
-
 object Test {
+  import Exists._
+
   def main(args: Array[String]): Unit = {
     val source: Vector[X4[Int, String, Double, Boolean]] =
       Vector(X4(1, "s", 1.1, true), X4(2, "t", 1.2, false))
@@ -136,23 +111,9 @@ object Test {
     val ds: Dataset[X4[Int, String, Double, Boolean]] =
       Dataset.create(source)
 
-    {
-      import UnusedExists._
-      import UnusedX4._
-      println("unused")
-      val unusedD = ds.col("d")
-      val outSpark1: Vector[Boolean] = ds.select(unusedD).collect()
-      assert(outSpark1 == outColl)
-    }
-
-    {
-      import UsedExists._
-      import UsedX4._
-      println("used")
-      val usedD = ds.col("d")
-      val outSpark2: Vector[Boolean] = ds.select(usedD).collect()
-      assert(outSpark2 == outColl)
-    }
+    val unusedD = ds.col("d")
+    val outSpark1: Vector[Boolean] = ds.select(unusedD).collect()
+    assert(outSpark1 == outColl)
 
     println("end")
   }

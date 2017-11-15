@@ -1,13 +1,13 @@
 object Test {
 
   def main(args: Array[String]): Unit = {
-    fun(foo)(foo)(foo)(foo)
-    fun2(foo)(foo)(foo)(foo)
+    fun(foo(1))(foo(2))(foo(3))(foo(4))
+    fun2(foo(1))(foo(2))(foo(3))(foo(4))
   }
 
-  def foo: Int = {
+  def foo(i: Int): Int = {
     println("foo")
-    42
+    i
   }
 
   def fun(a: Int)(unused b: Int)(c: Int)(unused d: Int): Unit = {

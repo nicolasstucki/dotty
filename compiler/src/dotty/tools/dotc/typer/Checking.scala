@@ -379,7 +379,7 @@ object Checking {
       }
     checkApplicable(UnusedType, !sym.is(UnusedType))
     if (sym.is(Unused)) {
-      checkApplicable(Unused, !sym.is(MutableOrLazy))
+      checkApplicable(Unused, sym.is(Param) || sym.is(ParamAccessor))
       if (sym.info.widen.finalResultType.isBottomType)
         fail("unused " + sym.showKind + " cannot have type Nothing")
     }

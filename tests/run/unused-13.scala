@@ -1,7 +1,7 @@
 object Test {
 
   def main(args: Array[String]): Unit = {
-    unused val x = {
+    lazy val x = {
       println("x")
       42
     }

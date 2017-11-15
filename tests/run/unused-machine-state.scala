@@ -7,7 +7,7 @@ final class Off extends State
 @implicitNotFound("State is must be Off")
 class IsOff[S <: State]
 object IsOff {
-  unused implicit def isOff: IsOff[Off] = {
+  implicit def isOff: IsOff[Off] = {
     println("isOff")
     new IsOff[Off]
   }
@@ -16,7 +16,7 @@ object IsOff {
 @implicitNotFound("State is must be On")
 class IsOn[S <: State]
 object IsOn {
-  unused implicit def isOn: IsOn[On] = {
+  implicit def isOn: IsOn[On] = {
     println("isOn")
     new IsOn[On]
   }

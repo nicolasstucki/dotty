@@ -9,9 +9,9 @@ import dotty.tools.dotc.core.Phases.Phase
 import dotty.tools.dotc.core.Types._
 import dotty.tools.dotc.transform.MegaPhase.MiniPhase
 
-/** This phase removes unused declarations of `def`s and `val`s (except for parameters).
+/** This phase removes unused declarations of val`s (except for parameters).
  *
- *  `unused def f(...) = ...` and  `unused val x = ...` are removed
+ *  `unused val x = ...` are removed
  */
 class UnusedDecls extends MiniPhase with InfoTransformer {
   import tpd._
@@ -31,10 +31,7 @@ class UnusedDecls extends MiniPhase with InfoTransformer {
 
   /* Tree transform */
 
-  override def transformDefDef(tree: DefDef)(implicit ctx: Context): Tree = transformValOrDefDef(tree)
-  override def transformValDef(tree: ValDef)(implicit ctx: Context): Tree = transformValOrDefDef(tree)
-
-  private def transformValOrDefDef(tree: ValOrDefDef)(implicit ctx: Context): Tree =
+  override def transformValDef(tree: ValDef)(implicit ctx: Context): Tree =
     if (tree.symbol.is(Unused, butNot = Param)) EmptyTree else tree
 
 

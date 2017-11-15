@@ -2,10 +2,10 @@ object Test {
 
   type F >: Bar <: Foo
 
-  unused val f: F = new Bar
-
-  type F1 <: f.X
-  type F2[Z <: f.X]
+  class A(unused val f: F) {
+    type F1 <: f.X
+    type F2[Z <: f.X]
+  }
 
 }
 

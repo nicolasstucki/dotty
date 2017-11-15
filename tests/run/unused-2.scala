@@ -3,13 +3,12 @@ object Test {
   def main(args: Array[String]): Unit = {
 
     def !!! : Null = ???
-    unused def &&& : Null = ???
 
-    fun(&&&)
     try {
       fun(!!!)
+      println("OK")
     } catch {
-      case e: NotImplementedError => println("OK")
+      case e: NotImplementedError =>
     }
   }
 

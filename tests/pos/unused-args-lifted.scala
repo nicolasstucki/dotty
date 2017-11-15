@@ -1,6 +1,6 @@
 object Test {
   def foo(unused a: Int)(b: Int, c: Int) = 42
-  unused def bar(i: Int): Int = {
+  def bar(i: Int): Int = {
     println(1)
     42
   }

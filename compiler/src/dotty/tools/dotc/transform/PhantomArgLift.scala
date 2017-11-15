@@ -2,17 +2,17 @@ package dotty.tools.dotc.transform
 
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.core.Contexts._
-import dotty.tools.dotc.core.Symbols._
+import dotty.tools.dotc.core.NameKinds._
 import dotty.tools.dotc.core.Types._
 import dotty.tools.dotc.transform.MegaPhase.MiniPhase
 import dotty.tools.dotc.typer.EtaExpansion
 
 import scala.collection.mutable.ListBuffer
 
-/** This phase extracts the unused arguments before the application to avoid losing any
- *  effects in the argument tree. This trivializes the removal of parameter in RemoveUnusedParams and Erasure phases.
+/** This phase extracts the arguments of phantom type before the application to avoid losing any
+ *  effects in the argument tree. This trivializes the removal of parameter in the Erasure phase.
  *
- *  `f(x1,...)(y1,...)...(...)` with at least one unused argument list
+ *  `f(x1,...)(y1,...)...(...)` with at least one phantom argument
  *
  *    -->
  *
@@ -24,15 +24,10 @@ import scala.collection.mutable.ListBuffer
  *  `ev$f(ev$x1,...)(ev$y1,...)...(...)`
  *
  */
-class UnusedArgLift extends MiniPhase {
+class PhantomArgLift extends MiniPhase {
   import tpd._
 
-  override def phaseName: String = "unusedArgLift"
-
-  override def runsAfter = Set(
-    // Not required, avoids creation of unnecessary vals for applications on methods with @unused
-    classOf[UnusedRefs]
-  )
+  override def phaseName: String = "phantomArgLift"
 
   /** Check what the phase achieves, to be called at any point after it is finished. */
   override def checkPostCondition(tree: Tree)(implicit ctx: Context): Unit = tree match {
@@ -48,11 +43,12 @@ class UnusedArgLift extends MiniPhase {
   override def transformApply(tree: Apply)(implicit ctx: Context): Tree = tree.tpe.widen match {
     case _: MethodType => tree // Do the transformation higher in the tree if needed
     case _ =>
-      if (!hasImpurePhantomArgs(tree) && !hasUnusedParams(tree)) tree
+      if (!hasImpurePhantomArgs(tree)) tree
       else {
         val buffer = ListBuffer.empty[Tree]
         val app = EtaExpansion.liftApp(buffer, tree)
-        seq(buffer.result(), app)
+        if (buffer.isEmpty) app
+        else Block(buffer.result(), app)
       }
   }
 
@@ -68,18 +64,6 @@ class UnusedArgLift extends MiniPhase {
         case _ => false
       }
     }
-  }
-
-  /** Returns true if at least on of the arguments is an unused parameter.
-   *  Inner applies are also checked in case of multiple parameter list.
-   */
-  private def hasUnusedParams(tree: Apply)(implicit ctx: Context): Boolean = {
-    def hasUnusedParams(tp: Type): Boolean = tp match {
-      case tp: MethodType if tp.isUnusedMethod => true
-      case tp: MethodOrPoly => hasUnusedParams(tp.resType)
-      case _ => false
-    }
-    hasUnusedParams(tree.symbol.info)
   }
 
 }

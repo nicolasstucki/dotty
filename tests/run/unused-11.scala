@@ -2,7 +2,6 @@ object Test {
 
   def main(args: Array[String]): Unit = {
     fun({ println("x1"); boo })({ println("x2"); boo })
-    fun({ println("x3"); boo2 })({ println("x4"); boo2 })
 
     new Fun({ println("y1"); boo })({ println("y2"); boo })
 
@@ -24,12 +23,8 @@ object Test {
     }
   }
 
-  unused def boo: Int = {
+  def boo: Int = {
     println("boo")
-    42
-  }
-  def boo2: Int = {
-    println("boo2")
     42
   }
 
