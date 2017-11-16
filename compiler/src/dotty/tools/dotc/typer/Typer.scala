@@ -2073,7 +2073,17 @@ class Typer extends Namer with TypeAssigner with Applications with Implicits wit
                 arg :: implicitArgs(formals1)
             }
         }
-        val args = implicitArgs(wtp.paramInfos)
+        def eraseUnusedArgs(args: List[Tree]): List[Tree] = {
+          if (!wtp.isUnusedMethod) args
+          else args.map { arg =>
+            arg.tpe match {
+              case _: AmbiguousImplicits | _: SearchFailureType => arg
+              case tpe => defaultValue(tpe)
+            }
+          }
+        }
+        val args = eraseUnusedArgs(implicitArgs(wtp.paramInfos))
+
 
         def propagatedFailure(args: List[Tree]): Type = args match {
           case arg :: args1 =>
