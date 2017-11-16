@@ -24,6 +24,7 @@ import NameKinds.DefaultGetterName
 import ProtoTypes._
 import EtaExpansion._
 import Inferencing._
+import UnusedUtil._
 
 import collection.mutable
 import config.Printers.{overload, typr, unapp}
@@ -774,12 +775,7 @@ trait Applications extends Compatibility { self: Typer with Dynamic =>
       }
       app match {
         case Apply(fun, args) if fun.tpe.widen.isUnusedMethod =>
-          val erasedArgs = args.map { arg =>
-            if (!isPureExpr(arg))
-              ctx.warning("This argument is given to an unused parameter. This expression will not be evaluated.", arg.pos)
-            defaultValue(arg.tpe)
-          }
-          tpd.cpy.Apply(app)(fun = fun, args = erasedArgs)
+          tpd.cpy.Apply(app)(fun = fun, args = args.map(arg => normalizeUnusedExpr(arg, "This argument is given to an unused parameter. ")))
         case _ => app
       }
     }
