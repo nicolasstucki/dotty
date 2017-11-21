@@ -111,7 +111,7 @@ class PlainPrinter(_ctx: Context) extends Printer {
 
   def nameString(name: Name): String = name.toString
 
-  def toText(name: Name): Text = Str(nameString(name))
+  def toText(name: Name): Text = Str(nameString(name), Int.MaxValue, -1)
 
   /** String representation of a name used in a refinement
    *  In refined printing this undoes type parameter expansion

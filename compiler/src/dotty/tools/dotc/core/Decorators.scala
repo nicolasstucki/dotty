@@ -18,7 +18,7 @@ object Decorators {
   implicit class PreNamedString(val s: String) extends AnyVal with PreName {
     def toTypeName: TypeName = typeName(s)
     def toTermName: TermName = termName(s)
-    def toText(printer: Printer): Text = Str(s)
+    def toText(printer: Printer): Text = Str(s, Int.MaxValue, -1)
   }
 
   implicit class StringDecorator(val s: String) extends AnyVal {

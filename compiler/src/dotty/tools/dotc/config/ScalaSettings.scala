@@ -92,6 +92,7 @@ class ScalaSettings extends Settings.SettingGroup {
   val YdetailedStats = BooleanSetting("-Ydetailed-stats", "show detailed internal compiler stats (needs Stats.enabled to be set to true).")
   val Yheartbeat = BooleanSetting("-Ydetailed-stats", "show heartbeat stack trace of compiler operations (needs Stats.enabled to be set to true).")
   val Yprintpos = BooleanSetting("-Yprintpos", "show tree positions.")
+  val YprintLines = BooleanSetting("-Yprint-lines", "show tree line numbers.")
   val YnoDeepSubtypes = BooleanSetting("-Yno-deep-subtypes", "throw an exception on deep subtyping call stacks.")
   val YnoPatmatOpt = BooleanSetting("-Yno-patmat-opt", "disable all pattern matching optimizations.")
   val YplainPrinter = BooleanSetting("-Yplain-printer", "Pretty-print using a plain printer.")

@@ -45,7 +45,7 @@ class UserFacingPrinter(_ctx: Context) extends RefinedPrinter(_ctx) {
     else ":" ~~ toText(sym.info)
   }
 
-  override def toText(const: Constant): Text = Str(const.value.toString)
+  override def toText(const: Constant): Text = Str(const.value.toString, Int.MaxValue, -1)
 
   override def argText(tp: Type): Text = tp match {
     case arg: TypeArgRef => argText(arg.underlying)

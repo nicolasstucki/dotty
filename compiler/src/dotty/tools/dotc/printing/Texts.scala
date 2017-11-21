@@ -10,9 +10,11 @@ object Texts {
     protected def indentMargin = 2
 
     def relems: List[Text]
+    def startLine: Int = relems.foldLeft(Int.MaxValue)((acc, elem) => acc min elem.startLine)
+    def endLine: Int = relems.foldLeft(-1)((acc, elem) => acc max elem.startLine)
 
     def isEmpty: Boolean = this match {
-      case Str(s) => s.isEmpty
+      case Str(s, _, _) => s.isEmpty
       case Fluid(relems) => relems forall (_.isEmpty)
       case Vertical(relems) => relems.isEmpty
     }
@@ -25,7 +27,7 @@ object Texts {
     def close = new Closed(relems)
 
     def remaining(width: Int): Int = this match {
-      case Str(s) =>
+      case Str(s, _, _) =>
         width - s.length
       case Fluid(Nil) =>
         width
@@ -37,15 +39,15 @@ object Texts {
     }
 
     def lastLine: String = this match {
-      case Str(s) => s
+      case Str(s, _, _) => s
       case _ => relems.head.lastLine
     }
 
     def appendToLastLine(that: Text): Text = that match {
-      case Str(s2) =>
+      case Str(s2, fl1, ll1) =>
         this match {
-          case Str(s1) => Str(s1 + s2)
-          case Fluid(Str(s1) :: prev) => Fluid(Str(s1 + s2) :: prev)
+          case Str(s1, fl2, ll2) => Str(s1 + s2, fl1 min fl2, ll1 max ll2)
+          case Fluid(Str(s1, fl2, ll2) :: prev) => Fluid(Str(s1 + s2, fl1 min fl2, ll1 max ll2) :: prev)
           case Fluid(relems) => Fluid(that :: relems)
         }
       case Fluid(relems) =>
@@ -66,22 +68,22 @@ object Texts {
     }
 
     def layout(width: Int): Text = this match {
-      case Str(_) =>
+      case Str(s, _, _) =>
         this
       case Fluid(relems) =>
-        ((Str(""): Text) /: relems.reverse)(_.append(width)(_))
+        ((Str("", startLine, endLine): Text) /: relems.reverse)(_.append(width)(_))
       case Vertical(relems) =>
         Vertical(relems map (_ layout width))
     }
 
     def map(f: String => String): Text = this match {
-      case Str(s) => Str(f(s))
+      case Str(s, fl, ll) => Str(f(s), fl, ll)
       case Fluid(relems) => Fluid(relems map (_ map f))
       case Vertical(relems) => Vertical(relems map (_ map f))
     }
 
     def stripPrefix(pre: String): Text = this match {
-      case Str(s) =>
+      case Str(s, _, _) =>
         if (s.startsWith(pre)) s drop pre.length else s
       case Fluid(relems) =>
         val elems = relems.reverse
@@ -94,13 +96,13 @@ object Texts {
     }
 
     private def indented: Text = this match {
-      case Str(s) => Str((" " * indentMargin) + s)
+      case Str(s, fl, ll) => Str((" " * indentMargin) + s, fl, ll)
       case Fluid(relems) => Fluid(relems map (_.indented))
       case Vertical(relems) => Vertical(relems map (_.indented))
     }
 
     def print(sb: StringBuilder): Unit = this match {
-      case Str(s) =>
+      case Str(s, _, _) =>
         sb.append(s)
       case _ =>
         var follow = false
@@ -113,6 +115,14 @@ object Texts {
 
     def mkString(width: Int): String = {
       val sb = new StringBuilder
+      println("==============")
+      println(this)
+      println("--------------")
+      println(layout(width))
+      println("--------------")
+      println()
+      println()
+      println()
       layout(width).print(sb)
       sb.toString
     }
@@ -125,19 +135,19 @@ object Texts {
     def ~~ (that: Text) =
       if (this.isEmpty) that
       else if (that.isEmpty) this
-      else Fluid(that :: Str(" ") :: this :: Nil)
+      else Fluid(that :: Str(" ", startLine, endLine) :: this :: Nil)
 
     def over (that: Text) =
       if (this.isVertical) Vertical(that :: this.relems)
       else Vertical(that :: this :: Nil)
 
-    def provided(pred: Boolean) = if (pred) this else Str("")
+    def provided(pred: Boolean) = if (pred) this else Str("", startLine, endLine)
   }
 
   object Text {
 
     /** The empty text */
-    def apply(): Text = Str("")
+    def apply(): Text = Str("", Int.MaxValue, -1)
 
     /** A concatenation of elements in `xs` and interspersed with
      *  separator strings `sep`.
@@ -146,7 +156,7 @@ object Texts {
       if (sep == "\n") lines(xs)
       else {
         val ys = xs filterNot (_.isEmpty)
-        if (ys.isEmpty) Str("")
+        if (ys.isEmpty) Str("", Int.MaxValue, -1)
         else ys reduce (_ ~ sep ~ _)
       }
     }
@@ -155,7 +165,7 @@ object Texts {
     def lines(xs: Traversable[Text]) = Vertical(xs.toList.reverse)
   }
 
-  case class Str(s: String) extends Text {
+  case class Str(s: String, override val startLine: Int, override val endLine: Int) extends Text {
     override def relems: List[Text] = List(this)
   }
 
@@ -164,5 +174,5 @@ object Texts {
 
   class Closed(relems: List[Text]) extends Fluid(relems)
 
-  implicit def stringToText(s: String): Text = Str(s)
+  implicit def stringToText(s: String): Text = Str(s, Int.MaxValue, -1)
 }

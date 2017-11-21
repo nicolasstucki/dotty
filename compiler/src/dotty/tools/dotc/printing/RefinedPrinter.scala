@@ -517,7 +517,7 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
       case SymbolLit(str) =>
         "'" + str
       case InterpolatedString(id, segments) =>
-        def strText(str: Literal) = Str(escapedString(str.const.stringValue))
+        def strText(str: Literal) = Str(escapedString(str.const.stringValue), str.pos.line, str.pos.endLine)
         def segmentText(segment: Tree) = segment match {
           case Thicket(List(str: Literal, expr)) => strText(str) ~ "{" ~ toTextGlobal(expr) ~ "}"
           case str: Literal => strText(str)
@@ -615,6 +615,18 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
         else tree.pos
       val clsStr = ""//if (tree.isType) tree.getClass.toString else ""
       txt = (txt ~ "@" ~ pos.toString ~ clsStr).close
+    }
+    if (ctx.settings.YprintLines.value && !suppressPositions) {
+      val pos =
+        if (homogenizedView && !tree.isInstanceOf[MemberDef]) tree.pos.toSynthetic
+        else tree.pos
+      if (pos.exists) {
+        txt match {
+          case Str(s, _, _) =>
+            txt = Str(s, pos.line, pos.endLine)
+          case _ =>
+        }
+      }
     }
     if (ctx.settings.YshowTreeIds.value)
       txt = (txt ~ "#" ~ tree.uniqueId.toString).close
