@@ -686,6 +686,8 @@ object Symbols {
   /* Mutable map from symbols any T */
   class MutableSymbolMap[T](private[Symbols] val value: java.util.IdentityHashMap[Symbol, T]) extends AnyVal {
 
+    def size: Int = value.size()
+
     def apply(sym: Symbol): T = value.get(sym)
 
     def get(sym: Symbol): Option[T] = Option(value.get(sym))

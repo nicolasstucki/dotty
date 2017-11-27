@@ -1,6 +1,7 @@
 package dotty.tools.backend.jvm
 
 import dotty.tools.dotc.ast.tpd
+import dotty.tools.dotc.ast.Trees._
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Symbols._
@@ -59,12 +60,21 @@ class LabelDefs extends MiniPhase {
   import tpd._
 
   def phaseName: String = "labelDef"
+  
+  /** Check what the phase achieves, to be called at any point after it is finished.
+    */
+  override def checkPostCondition(tree: tpd.Tree)(implicit ctx: Context): Unit = {
+    tree match {
+      case tree: DefDef if !tree.symbol.is(Label) =>
+        assertScopes(tree.rhs)
+      case _ =>
+    }
+  }
 
   override def transformDefDef(tree: DefDef)(implicit ctx: Context): Tree = {
     if (tree.symbol is Label) tree
     else {
       val labelDefs = collectLabelDefs(tree.rhs)
-
       def putLabelDefsNearCallees = new TreeMap() {
         override def transform(tree: Tree)(implicit ctx: Context): Tree = {
           tree match {
@@ -84,6 +94,49 @@ class LabelDefs extends MiniPhase {
       if (labelDefs.isEmpty) tree
       else cpy.DefDef(tree)(rhs = putLabelDefsNearCallees.transform(tree.rhs))
     }
+  }
+
+  private def assertScopes(tree: Tree)(implicit ctx: Context): Tree = {
+    val sb = new mutable.StringBuilder()
+    sb append ("=" * 40)
+    sb append "\n"
+    sb append tree.show
+    sb append "\n"
+    sb append ("=" * 40)
+    sb append "\n"
+    var fail = false
+    val fff = mutable.Set.empty[Symbol]
+    new TreeTraverser {
+      override def traverse(tree: tpd.Tree)(implicit ctx: Context): Unit = tree match {
+        case Block(x :: Nil, y) if y.symbol.is(Label) =>
+          assert(x.symbol.is(Label) && x.isInstanceOf[DefDef])
+          fff += x.symbol
+          traverseChildren(x)
+          fff -= x.symbol
+          traverseChildren(y)
+        case Apply(fun, args) if tree.symbol.is(Label) && !fff.contains(tree.symbol) =>
+          sb append tree.show
+        sb append "\n"
+          fail = true
+          traverseChildren(fun)
+          args.foreach(traverseChildren)
+        case _ => traverseChildren(tree)
+      }
+    }.traverse(tree)
+    sb append ("=" * 40)
+    sb append "\n"
+    sb append "\n"
+    sb append "\n"
+    sb append "\n"
+    sb append "\n"
+
+    if (fail) {
+      println("=" * 40)
+      println(ctx.compilationUnit)
+      println(sb.result())
+      assert(false)
+    }
+    tree
   }
 
   private def collectLabelDefs(tree: Tree)(implicit ctx: Context): MutableSymbolMap[DefDef] = {
