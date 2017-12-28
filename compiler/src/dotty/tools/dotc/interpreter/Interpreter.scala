@@ -7,10 +7,13 @@ import dotty.tools.dotc.core.Constants._
 import dotty.tools.dotc.core.Contexts._
 import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Decorators._
+import dotty.tools.dotc.core.StdNames._
 import dotty.tools.dotc.core.Symbols._
 
 import scala.reflect.ClassTag
 import java.net.URLClassLoader
+
+import dotty.tools.dotc.util.Positions.Position
 
 /** Tree interpreter that can interpret
  *   * Literal constants
@@ -37,8 +40,9 @@ class Interpreter(implicit ctx: Context) {
       interpretTreeImpl(tree) match {
         case obj: T => Some(obj)
         case obj =>
+          // TODO upgrade to a full type tag check or something similar
           ctx.error(s"Interpreted tree returned a result of an unexpected type. Expected ${ct.runtimeClass} but was ${obj.getClass}", tree.pos)
-          throw new StopInterpretation
+          None
       }
     } catch {
       case _: StopInterpretation => None
@@ -50,7 +54,7 @@ class Interpreter(implicit ctx: Context) {
    *
    *  If some error is encountered while interpreting a ctx.error is emited and a StopInterpretation is thrown.
    */
-  private def interpretTreeImpl(tree: Tree): Object = {
+  private def interpretTreeImpl(tree: Tree): Object = { // TODO add environment
     try {
       tree match {
         case Apply(_, quote :: Nil) if tree.symbol eq defn.quoteMethod =>
@@ -80,30 +84,24 @@ class Interpreter(implicit ctx: Context) {
           val method = clazz.getMethod(tree.name.toString)
           method.invoke(null)
 
-        case tree: RefTree if tree.symbol.is(Module) =>
-          ??? // TODO
+        // case tree: RefTree if tree.symbol.is(Module) => // TODO
+        // case Block(stats, expr) => // TODO evaluate bindings add environment
+        // case ValDef(_, _, rhs) =>  // TODO evaluate bindings add environment
 
         case Inlined(_, bindings, expansion) =>
-          if (bindings.nonEmpty) ??? // TODO evaluate bindings and add environment
+          assert(bindings.isEmpty) // TODO evaluate bindings and add environment
           interpretTreeImpl(expansion)
         case _ =>
-          val msg =
-            if (tree.tpe.derivesFrom(defn.QuotedExprClass)) "Quote needs to be explicit or a call to a static method"
-            else "Value needs to be a explicit or a call to a static method"
-          ctx.error(msg, tree.pos)
-          throw new StopInterpretation
+          throw new StopInterpretation(s"Could not interpret ${tree.show}", tree.pos)
       }
     } catch {
       case ex: NoSuchMethodException =>
-        ctx.error("Could not find interpreted method in classpath: " + ex.getMessage, tree.pos)
-        throw new StopInterpretation
+        throw new StopInterpretation("Could not find interpreted method in classpath: " + ex.getMessage, tree.pos)
       case ex: ClassNotFoundException =>
-        ctx.error("Could not find interpreted class in classpath: " + ex.getMessage, tree.pos)
-        throw new StopInterpretation
+        throw new StopInterpretation("Could not find interpreted class in classpath: " + ex.getMessage, tree.pos)
       case ex: RuntimeException =>
         ex.printStackTrace()
-        ctx.error("A runtime exception occurred while interpreting: " + ex.getMessage, tree.pos)
-        throw new StopInterpretation
+        throw new StopInterpretation("A runtime exception occurred while interpreting: " + ex.getMessage, tree.pos)
     }
   }
 
@@ -124,6 +122,6 @@ class Interpreter(implicit ctx: Context) {
   }
 
   /** Exception that stops interpretation if some issue is found */
-  private class StopInterpretation extends Exception
+  private class StopInterpretation(msg: String, pos: Position) extends Exception
 
 }
