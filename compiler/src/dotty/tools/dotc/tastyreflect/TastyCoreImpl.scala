@@ -10,6 +10,7 @@ trait TastyCoreImpl extends scala.tasty.reflect.TastyCore {
   type Context = core.Contexts.Context
 
   type Parent = tpd.Tree
+  type DefinitionOrBind = tpd.Tree
 
   type Tree = tpd.Tree
     type PackageClause = tpd.PackageDef
@@ -26,6 +27,11 @@ trait TastyCoreImpl extends scala.tasty.reflect.TastyCore {
   type CaseDef = tpd.CaseDef
 
   type Pattern = tpd.Tree
+    type Value = tpd.Tree /* Literal | RefTree | This */
+    type Bind = tpd.Bind
+    type Unapply = tpd.Tree /* Unapply | Typed */
+    type Alternative = tpd.Alternative
+    type TypeTest = tpd.Typed
 
   type TypeOrBoundsTree = tpd.Tree
     type TypeTree = tpd.Tree
