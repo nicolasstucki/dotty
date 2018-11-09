@@ -26,6 +26,7 @@ trait TastyCoreImpl extends scala.tasty.reflect.TastyCore {
       type Term = tpd.Tree
 
   type CaseDef = tpd.CaseDef
+  type TypeCaseDef = tpd.CaseDef
 
   type Pattern = tpd.Tree
     type Value = tpd.Tree

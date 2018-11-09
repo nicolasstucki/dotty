@@ -487,6 +487,19 @@ class ShowSourceCode[T <: Tasty with Singleton](tasty0: T) extends Show[T](tasty
       this
     }
 
+    def printTypes(trees: List[Type], sep: String): Buffer = {
+      def printSeparated(list: List[Type]): Unit = list match {
+        case Nil =>
+        case x :: Nil => printType(x)
+        case x :: xs =>
+          printType(x)
+          this += sep
+          printSeparated(xs)
+      }
+      printSeparated(trees)
+      this
+    }
+
     def printImportSelectors(selectors: List[ImportSelector]): Buffer = {
       def printSeparated(list: List[ImportSelector]): Unit = list match {
         case Nil =>
@@ -507,6 +520,19 @@ class ShowSourceCode[T <: Tasty with Singleton](tasty0: T) extends Show[T](tasty
         case x :: Nil => printCaseDef(x)
         case x :: xs =>
           printCaseDef(x)
+          this += sep
+          printSeparated(xs)
+      }
+      printSeparated(cases)
+      this
+    }
+
+    def printTypeCases(cases: List[TypeCaseDef], sep: String): Buffer = {
+      def printSeparated(list: List[TypeCaseDef]): Unit = list match {
+        case Nil =>
+        case x :: Nil => printTypeCaseDef(x)
+        case x :: xs =>
+          printTypeCaseDef(x)
           this += sep
           printSeparated(xs)
       }
@@ -683,6 +709,14 @@ class ShowSourceCode[T <: Tasty with Singleton](tasty0: T) extends Show[T](tasty
       this
     }
 
+    def printTypeCaseDef(caseDef: TypeCaseDef): Buffer = {
+      this += highlightValDef("case ", color)
+      printTypeTree(caseDef.pattern)
+      this += highlightValDef(" => ", color)
+      printTypeTree(caseDef.rhs)
+      this
+    }
+
     def printPattern(pattern: Pattern): Buffer = pattern match {
       case Pattern.Value(v) =>
         v match {
@@ -817,6 +851,11 @@ class ShowSourceCode[T <: Tasty with Singleton](tasty0: T) extends Show[T](tasty
         this += highlightTypeDef(" | ", color)
         printTypeTree(right)
 
+      case TypeTree.MatchType(bound, selector, cases) =>
+        printTypeTree(selector)
+        this += highlightKeyword(" match ", color)
+        inBlock(printTypeCases(cases, lineBreak()))
+
       case TypeTree.ByName(result) =>
         this += highlightTypeDef("=> ", color)
         printTypeTree(result)
@@ -915,6 +954,11 @@ class ShowSourceCode[T <: Tasty with Singleton](tasty0: T) extends Show[T](tasty
         printType(left)
         this += highlightTypeDef(" | ", color)
         printType(right)
+
+      case Type.MatchType(bound, scrutinee, cases) =>
+        printType(scrutinee)
+        this += highlightKeyword(" match ", color)
+        inBlock(printTypes(cases, lineBreak()))
 
       case Type.ByNameType(tp) =>
         this += highlightTypeDef(" => ", color)

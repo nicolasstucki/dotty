@@ -125,11 +125,18 @@ class ShowExtractors[T <: Tasty with Singleton](tasty0: T) extends Show[T](tasty
         this += "TypeBoundsTree(" += lo += ", " += hi += ")"
       case SyntheticBounds() =>
         this += s"SyntheticBounds()"
+      case TypeTree.MatchType(bound, selector, cases) =>
+        this += "TypeTree.MatchType(" += bound += ", " += selector += ", " ++= cases += ")"
     }
 
     def visitCaseDef(x: CaseDef): Buffer = {
       val CaseDef(pat, guard, body) = x
       this += "CaseDef(" += pat += ", " += guard += ", " += body += ")"
+    }
+
+    def visitTypeCaseDef(x: TypeCaseDef): Buffer = {
+      val TypeCaseDef(pat, body) = x
+      this += "TypeCaseDef(" += pat += ", " += body += ")"
     }
 
     def visitPattern(x: Pattern): Buffer = x match {
@@ -185,6 +192,8 @@ class ShowExtractors[T <: Tasty with Singleton](tasty0: T) extends Show[T](tasty
         this += "Type.AndType(" += left += ", " += right += ")"
       case Type.OrType(left, right) =>
         this += "Type.OrType(" += left += ", " += right += ")"
+      case Type.MatchType(bound, scrutinee, cases) =>
+        this += "Type.MatchType(" += bound += ", " += scrutinee += ", " ++= cases += ")"
       case Type.ByNameType(underlying) =>
         this += "Type.ByNameType(" += underlying += ")"
       case Type.ParamRef(binder, idx) =>
@@ -257,6 +266,11 @@ class ShowExtractors[T <: Tasty with Singleton](tasty0: T) extends Show[T](tasty
     private implicit class CaseDefOps(buff: Buffer) {
       def +=(x: CaseDef): Buffer = { visitCaseDef(x); buff }
       def ++=(x: List[CaseDef]): Buffer = { visitList(x, visitCaseDef); buff }
+    }
+
+    private implicit class TypeCaseDefOps(buff: Buffer) {
+      def +=(x: TypeCaseDef): Buffer = { visitTypeCaseDef(x); buff }
+      def ++=(x: List[TypeCaseDef]): Buffer = { visitList(x, visitTypeCaseDef); buff }
     }
 
     private implicit class PatternOps(buff: Buffer) {
