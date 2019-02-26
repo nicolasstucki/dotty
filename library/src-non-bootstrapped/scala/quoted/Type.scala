@@ -13,16 +13,6 @@ object Type {
   /** A term quote is desugared by the compiler into a call to this method */
   def apply[T]: Type[T] =
     throw new Error("Internal error: this method call should have been replaced by the compiler")
-
-  implicit def UnitTag: Type[Unit] = new TaggedType[Unit]
-  implicit def BooleanTag: Type[Boolean] = new TaggedType[Boolean]
-  implicit def ByteTag: Type[Byte] = new TaggedType[Byte]
-  implicit def CharTag: Type[Char] = new TaggedType[Char]
-  implicit def ShortTag: Type[Short] = new TaggedType[Short]
-  implicit def IntTag: Type[Int] = new TaggedType[Int]
-  implicit def LongTag: Type[Long] = new TaggedType[Long]
-  implicit def FloatTag: Type[Float] = new TaggedType[Float]
-  implicit def DoubleTag: Type[Double] = new TaggedType[Double]
 }
 
 /** All implementations of Type[T].

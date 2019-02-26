@@ -47,7 +47,7 @@ object TestConfiguration {
   val yCheckOptions = Array("-Ycheck:all")
 
   val commonOptions = checkOptions ++ noCheckOptions ++ yCheckOptions
-  val defaultOptions = TestFlags(basicClasspath, commonOptions)
+  val defaultOptions = TestFlags(basicClasspath, commonOptions) and "-Ykind-polymorphism" // FIXME remove "-Ykind-polymorphism"
   val withCompilerOptions =
     defaultOptions.withClasspath(withCompilerClasspath).withRunClasspath(withCompilerClasspath)
   val allowDeepSubtypes = defaultOptions without "-Yno-deep-subtypes"
