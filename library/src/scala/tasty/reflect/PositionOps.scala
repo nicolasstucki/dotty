@@ -14,7 +14,7 @@ trait PositionOps extends Core {
     def exists: Boolean = kernel.Position_exists(pos)
 
     /** Source file in which this position is located */
-    def sourceFile: java.nio.file.Path = kernel.Position_sourceFile(pos)
+    def sourceFile: SourceFile = kernel.Position_sourceFile(pos)
 
     /** The start line in the source file */
     def startLine: Int = kernel.Position_startLine(pos)

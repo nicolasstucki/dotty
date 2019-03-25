@@ -36,6 +36,9 @@ class KernelImpl(val rootContext: core.Contexts.Context, val rootPosition: util.
   def error(msg: => String, pos: Position)(implicit ctx: Context): Unit =
     ctx.error(msg, pos)
 
+  def error(msg: => String, pos: Position)(implicit ctx: Context): Unit =
+    ctx.error(msg, pos)
+
   def warning(msg: => String, pos: Position)(implicit ctx: Context): Unit =
     ctx.warning(msg, pos)
 
@@ -1297,7 +1300,7 @@ class KernelImpl(val rootContext: core.Contexts.Context, val rootPosition: util.
 
   def Position_exists(self: Position): Boolean = self.exists
 
-  def Position_sourceFile(self: Position): java.nio.file.Path = self.source.file.jpath
+  def Position_sourceFile(self: Position): SourceFile = self.source
 
   def Position_startLine(self: Position): Int = self.startLine
 
