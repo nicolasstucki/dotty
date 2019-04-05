@@ -263,7 +263,7 @@ class Inliner(call: tpd.Tree, rhsToInline: tpd.Tree)(implicit ctx: Context) {
     val boundSym = newSym(name, bindingFlags, bindingType).asTerm
     val binding = {
       if (isByName) DefDef(boundSym, arg.changeOwner(ctx.owner, boundSym))
-      else ValDef(boundSym, arg)
+      else ValDef(boundSym, Inlined(EmptyTree, Nil, arg.withSpan(boundSym.span)).withSpan(boundSym.span)) // TODO whhy the outer withSpan does not set the one of the Inlined?
     }.withSpan(boundSym.span)
     bindingsBuf += binding.setDefTree
     binding
@@ -286,7 +286,7 @@ class Inliner(call: tpd.Tree, rhsToInline: tpd.Tree)(implicit ctx: Context) {
         paramSpan(name) = arg.span
         paramBinding(name) = arg.tpe.dealias match {
           case _: SingletonType if isIdempotentExpr(arg) => arg.tpe
-          case _ => paramBindingDef(name, paramtp, arg, bindingsBuf).symbol.termRef
+          case _ => paramBindingDef(name, paramtp, arg, bindingsBuf)(ctx.withSource(inlinedMethod.source)).symbol.termRef
         }
       }
       computeParamBindings(tp.resultType, targs, argss.tail)
@@ -455,8 +455,7 @@ class Inliner(call: tpd.Tree, rhsToInline: tpd.Tree)(implicit ctx: Context) {
           val inlinedCtx = ctx.withSource(inlinedMethod.topLevelClass.source)
           paramProxy.get(tree.tpe) match {
             case Some(t) if tree.isTerm && t.isSingleton =>
-              val inlinedSingleton = singleton(t).withSpan(argSpan)
-              inlinedFromOutside(inlinedSingleton)(tree.span)
+              singleton(t)(ctx.withSource(inlinedMethod.topLevelClass.source)).withSpan(argSpan)
             case Some(t) if tree.isType =>
               TypeTree(t).withSpan(argSpan)
             case _ => tree
@@ -533,7 +532,7 @@ class Inliner(call: tpd.Tree, rhsToInline: tpd.Tree)(implicit ctx: Context) {
           finalExpansion
       }
 
-      tpd.Inlined(call, Nil, tpd.seq(finalBindings, finalExpansion2))
+      tpd.Inlined(call, Nil, tpd.seq(finalBindings, finalExpansion2)(ctx.withSource(finalExpansion2.source)))
     }
   }
 
