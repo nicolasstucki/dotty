@@ -4,7 +4,9 @@ object B {
       println(); "a"
     }, {
       println(); "b"
-    })
+    },
+      "c"
+    )
   }
 
 }

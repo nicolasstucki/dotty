@@ -663,7 +663,7 @@ class Inliner(call: tpd.Tree, rhsToInline: tpd.Tree)(implicit ctx: Context) {
             case Some(vdef: ValDef) if vdef.symbol.is(Inline) =>
               Some(integrate(vdef.rhs, vdef.symbol))
             case Some(ddef: DefDef) =>
-              Some(integrate(ddef.rhs, ddef.symbol))
+              Some(Inlined(EmptyTree, Nil, integrate(ddef.rhs, ddef.symbol)).withSpan(tree.span))
             case _ => None
           }
         else None
